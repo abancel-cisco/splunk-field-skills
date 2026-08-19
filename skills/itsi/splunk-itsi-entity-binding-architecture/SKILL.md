@@ -147,7 +147,7 @@ In the GUI, this rule reads:
 
 ### Layer 3 — Generic SIM OS Hosts base search
 
-The full base search body for a SIM-fed OS Hosts service. Reusable across customers — nothing customer-specific:
+The full base search body for a SIM-fed OS Hosts service. Reusable across deployments — nothing site-specific:
 
 ```spl
 | mstats 

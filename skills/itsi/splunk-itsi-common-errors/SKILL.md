@@ -66,7 +66,7 @@ On ITSI 5.0 stacks with Windows content packs (`DA-ITSI-CP-windows`, `DA-ITSI-CP
 
 **Step 1 — Prompt the human to install the add-on**
 
-The agent cannot install Splunkbase apps on the customer's stack. Ask the admin to install:
+The agent cannot install Splunkbase apps on the stack. Ask a Splunk admin to install:
 
 - **Splunk Add-on for Microsoft Windows**
 - Splunkbase: https://splunkbase.splunk.com/app/742

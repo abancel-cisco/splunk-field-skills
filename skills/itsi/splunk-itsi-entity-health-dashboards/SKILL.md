@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 How ITSI **Entity Health** loads custom dashboards, why they often **fail only in the embed**, and the **validated contract** for non-host entity identifiers on ITSI 4.21.x / Splunk Cloud.
 
-**Validated on:** ITSI 4.21.x, Splunk Cloud (multiple customer stacks).
+**Validated on:** ITSI 4.21.x, Splunk Cloud (multiple stacks).
 
 ## When to use this skill
 

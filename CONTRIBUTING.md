@@ -4,9 +4,9 @@ Pull requests are welcome, particularly corrections and version re-validations.
 
 ## The three rules that matter
 
-**1. No customer-identifying information.** Ever, anywhere, including in examples,
+**1. Nothing that identifies a real organisation.** Ever, anywhere, including in examples,
 sample output, screenshots, URLs, and commit messages. Git history is permanent, and a
-customer name scrubbed in a later commit is still public. Use `Buttercup` as the
+name scrubbed in a later commit is still public. Use `Buttercup` as the
 placeholder organisation, `buttercup-itsi.splunkcloud.com` style hostnames, and the
 [RFC 5737](https://datatracker.ietf.org/doc/html/rfc5737) documentation ranges
 (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`) for IP addresses. Never a real
@@ -14,6 +14,13 @@ stack hostname, a real username, or a real email address.
 
 The same applies to internal-only material: lab hostnames, internal enablement content,
 and anything not intended for a public audience.
+
+A related habit, easy to slip into if you write these during consulting work: address the
+reader as the person who runs the Splunk instance, not as somebody's consultant. "The
+customer must issue a token" tells a Splunk admin to go and ask themselves. Write "the
+Splunk admin", "the ops team", or simply "you". Where the word really means a deployment
+a content pack ships to, say "deployment"; where it means an app installed on site rather
+than by Splunk, say "locally installed".
 
 **2. Say what you validated against.** Every skill states the product versions and the
 date behind it, for example *"Validated on ITSI 5.0.1 / Splunk Enterprise 10.4.1,
@@ -100,7 +107,7 @@ python3 tools/validate_skills.py
 ```
 
 This checks frontmatter, name/directory agreement, category validity, and scans for
-identifiers that look like real customer data. CI runs the same check plus
+identifiers that look like real environment data. CI runs the same check plus
 [gitleaks](https://github.com/gitleaks/gitleaks).
 
 If you add or move a skill, also update:

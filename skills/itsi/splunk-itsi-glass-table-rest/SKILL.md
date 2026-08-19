@@ -1,13 +1,13 @@
 ---
 name: splunk-itsi-glass-table-rest
 category: itsi
-description: Create ITSI Glass Tables programmatically via REST API — Service-Health-Score tiles overlaid on a custom backdrop image. Covers the gt_version=beta schema (visualizations / dataSources / layout.structure / inputs / defaults), the form-encoded `data=<JSON>` body convention that ITSI's itoa_interface endpoint requires (raw JSON returns "owner fields corrupted or missing in payload"), the SA-ITOA_files KV store collection used for backdrop images (base64 in `data` field, referenced via `splunk-enterprise-kvstore://<_key>`), the `get_full_itsi_summary_kpi(<kpi_id>)` macro pattern, the SHKPI-<service_id> ID convention for Service Health Score KPIs, and the "background carries the story, tiles carry the data" composition pattern proven on the SAP-GT-Template and reused for Buttercup. Use when a customer asks for a custom glass table that visualises service interactions / sequential flows / cross-perimeter dependencies, when you need to produce a glass table from a service tree without clicking through the GUI, when batching glass-table creation across an environment, or when you want a backdrop that combines a real customer logo with directional flow arrows.
+description: Create ITSI Glass Tables programmatically via REST API — Service-Health-Score tiles overlaid on a custom backdrop image. Covers the gt_version=beta schema (visualizations / dataSources / layout.structure / inputs / defaults), the form-encoded `data=<JSON>` body convention that ITSI's itoa_interface endpoint requires (raw JSON returns "owner fields corrupted or missing in payload"), the SA-ITOA_files KV store collection used for backdrop images (base64 in `data` field, referenced via `splunk-enterprise-kvstore://<_key>`), the `get_full_itsi_summary_kpi(<kpi_id>)` macro pattern, the SHKPI-<service_id> ID convention for Service Health Score KPIs, and the "background carries the story, tiles carry the data" composition pattern proven on the SAP-GT-Template and reused for Buttercup. Use when someone asks for a custom glass table that visualises service interactions / sequential flows / cross-perimeter dependencies, when you need to produce a glass table from a service tree without clicking through the GUI, when batching glass-table creation across an environment, or when you want a backdrop that combines a real organisation logo with directional flow arrows.
 disable-model-invocation: true
 ---
 
 # ITSI Glass Tables via REST
 
-> **Prefer `splunk-dashboard-studio-rest` unless you specifically need glass-table features.** ITSI Glass Tables are a fork of an older Dashboard Studio snapshot with undocumented strict-mode constraints — schema deviations black-screen the React canvas silently (no console error visible, no fallback). Dashboard Studio v2 is the actively-maintained native renderer, has predictable HTTP 400 errors when the schema is wrong, and supports the same `splunk.singlevalue` + `absolute` layout primitives. Only use this skill when the customer explicitly wants a glass table (e.g. for swap-services or ITSI-only annotations) or when ingesting an existing glass table.
+> **Prefer `splunk-dashboard-studio-rest` unless you specifically need glass-table features.** ITSI Glass Tables are a fork of an older Dashboard Studio snapshot with undocumented strict-mode constraints — schema deviations black-screen the React canvas silently (no console error visible, no fallback). Dashboard Studio v2 is the actively-maintained native renderer, has predictable HTTP 400 errors when the schema is wrong, and supports the same `splunk.singlevalue` + `absolute` layout primitives. Only use this skill when a glass table is explicitly required (e.g. for swap-services or ITSI-only annotations) or when ingesting an existing glass table.
 
 Build an ITSI Glass Table (gt_version=beta) end-to-end from a Python script: generate the backdrop PNG, upload it to KV store, compose the JSON definition, POST it, verify by GET. The "background carries the story, tiles carry the data" pattern keeps the glass-table JSON small while still letting you express rich layouts (logos, perimeter columns, sequential flow arrows).
 
@@ -15,7 +15,7 @@ Build an ITSI Glass Table (gt_version=beta) end-to-end from a Python script: gen
 
 ## When to use
 
-- Customer asks for a "service flow map" / "executive overview" / "sequence-of-flows" visualisation that ties multiple ITSI services together
+- Someone asks for a "service flow map" / "executive overview" / "sequence-of-flows" visualisation that ties multiple ITSI services together
 - The service tree is large (>10 services) and clicking through the GT designer for every tile is impractical
 - The layout needs to reflect an architecture diagram (arrows, columns by perimeter, sequential flows) — easier to draw the diagram in PIL/Photoshop/Figma than to compose it in the GT designer
 - You need glass-table creation to be idempotent / replayable (CI/CD, multi-environment rollout)
@@ -480,7 +480,7 @@ Always GET the created glass table back and inspect:
 | Forgetting `gt_version: "beta"` | Server falls back to legacy SVG-coords schema; your modern `definition` is ignored | Always include `"gt_version": "beta"` |
 | Composing per-tile labels as separate viz items | Bloats JSON; misaligns with the SAP template approach; harder to maintain | Put all labels in the backdrop PNG; tiles are data-only |
 | Animated / connector primitives | Don't exist in the beta schema; reverse-engineering newer React components is fragile across ITSI versions | Use PNG arrows + a small SHS tile next to the flow if you need a live signal there |
-| Generating a corporate logo from scratch | Trademark / brand integrity issues; customer will reject | Download the real logo (Wikimedia Commons public-domain trademark files, or the customer's brand portal) |
+| Generating a corporate logo from scratch | Trademark / brand integrity issues; the brand owner will reject it | Download the real logo (Wikimedia Commons public-domain trademark files, or the organisation's brand portal) |
 | Computing `SHKPI-<svc_id>` IDs by GETting the service first | Wastes API calls; the convention is deterministic | Just prepend `SHKPI-`; the service must exist (which you already know) |
 | Using PNG dimensions that don't match the layout `width/height` | Tiles drift relative to the backdrop because ITSI scales the backdrop independently | Generate the PNG at the EXACT canvas dimensions declared in `layout.options.{width,height}` |
 | Editing the glass table via UI after a script run, then re-running the script | UI changes are silently discarded by the next DELETE+POST | Treat the script as the source of truth; commit it to the project repo |

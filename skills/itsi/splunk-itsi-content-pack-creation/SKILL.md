@@ -2,7 +2,7 @@
 name: splunk-itsi-content-pack-creation
 category: itsi
 description: >-
-  End-to-end playbook for authoring a custom Splunk ITSI Content Pack (CP) from scratch — a deployable .tar.gz Splunk app produced by the ITSI "Create Content Pack" wizard that bundles services, KPIs, kpi_base_searches, service templates, and dashboards into a reusable artifact (e.g. for DB monitoring, business transactions, or a customer-specific overlay). Covers the five phases (1. design the CP scope; 2. build the components in ITSI via REST in leaves-first order; 3. verify entity binding + KPI data + dependencies BEFORE packaging; 4. run the wizard click-by-click with the exact field values; 5. install + cleanup redundant predecessor objects on the target env), the pre-flight checklist that prevents the two most expensive silent failures (Bug 4 case-sensitivity on entity rules, the kpi_base_search `is_metric` trap), the difference between authoring services in-tree (so the wizard picks them up automatically) vs. drafting standalone templates, the wizard's "select a service, get the dependency closure for free" behavior, the install-side pitfalls (sec_grp / Global team membership for cross-team consumption, app-load order vs SIM content pack, sourcetype-vs-index conflicts), the post-deploy cleanup pattern of disabling the predecessor base searches the new consolidated CP replaces, AND the in-place consolidation alternative path (when you don't want to ship a CP at all but instead repoint existing KPIs from per-metric SIM base searches onto your consolidated one and disable the predecessors directly — covers the four hidden-state landmines that ITSI does NOT auto-reconcile when you PATCH a KPI's `base_search_id`: stale `entity_alias_filtering_fields` causing zero entity matches, stale `target_field` pointing at the OLD column name, stale `aggregate_thresholds.metricField` / `entity_thresholds.metricField` inherited from a CPU-template clone, stale field references buried inside `time_variate_thresholds_specification` JSON; plus the search-head-load false-negative pattern where itsi_summary probes return zero rows during the very performance crunch you're trying to fix, the backing-saved-search disable mechanism in the `itsi` app namespace, ITSI's auto-cleanup of orphaned backing saved searches, and the tablespace-style cardinality exception that prevents full consolidation). Use when authoring a brand-new ITSI content pack from scratch, when extending the topology under an existing service (e.g. Application Performance Monitoring → Database → Database Oracle), when consolidating multiple per-metric base searches into one shared base search before packaging, when preparing to run the ITSI "Create Content Pack" wizard, when guiding a step-by-step packaging session, when planning the post-install cleanup of obsolete predecessor objects, when repointing existing KPIs onto a different base_search_id without packaging a CP, when disabling redundant kpi_base_search objects without deleting them, when reducing search head load by eliminating redundant scheduled searches, or when the user mentions ITSI content pack creation / CP wizard / Create Content Pack / DA-ITSI-CP-* app authoring / content pack export / "just replace the base searches" / KPI repointing / kpi_base_search disable / search head performance / skipped searches cleanup.
+  End-to-end playbook for authoring a custom Splunk ITSI Content Pack (CP) from scratch — a deployable .tar.gz Splunk app produced by the ITSI "Create Content Pack" wizard that bundles services, KPIs, kpi_base_searches, service templates, and dashboards into a reusable artifact (e.g. for DB monitoring, business transactions, or a site-specific overlay). Covers the five phases (1. design the CP scope; 2. build the components in ITSI via REST in leaves-first order; 3. verify entity binding + KPI data + dependencies BEFORE packaging; 4. run the wizard click-by-click with the exact field values; 5. install + cleanup redundant predecessor objects on the target env), the pre-flight checklist that prevents the two most expensive silent failures (Bug 4 case-sensitivity on entity rules, the kpi_base_search `is_metric` trap), the difference between authoring services in-tree (so the wizard picks them up automatically) vs. drafting standalone templates, the wizard's "select a service, get the dependency closure for free" behavior, the install-side pitfalls (sec_grp / Global team membership for cross-team consumption, app-load order vs SIM content pack, sourcetype-vs-index conflicts), the post-deploy cleanup pattern of disabling the predecessor base searches the new consolidated CP replaces, AND the in-place consolidation alternative path (when you don't want to ship a CP at all but instead repoint existing KPIs from per-metric SIM base searches onto your consolidated one and disable the predecessors directly — covers the four hidden-state landmines that ITSI does NOT auto-reconcile when you PATCH a KPI's `base_search_id`: stale `entity_alias_filtering_fields` causing zero entity matches, stale `target_field` pointing at the OLD column name, stale `aggregate_thresholds.metricField` / `entity_thresholds.metricField` inherited from a CPU-template clone, stale field references buried inside `time_variate_thresholds_specification` JSON; plus the search-head-load false-negative pattern where itsi_summary probes return zero rows during the very performance crunch you're trying to fix, the backing-saved-search disable mechanism in the `itsi` app namespace, ITSI's auto-cleanup of orphaned backing saved searches, and the tablespace-style cardinality exception that prevents full consolidation). Use when authoring a brand-new ITSI content pack from scratch, when extending the topology under an existing service (e.g. Application Performance Monitoring → Database → Database Oracle), when consolidating multiple per-metric base searches into one shared base search before packaging, when preparing to run the ITSI "Create Content Pack" wizard, when guiding a step-by-step packaging session, when planning the post-install cleanup of obsolete predecessor objects, when repointing existing KPIs onto a different base_search_id without packaging a CP, when disabling redundant kpi_base_search objects without deleting them, when reducing search head load by eliminating redundant scheduled searches, or when the user mentions ITSI content pack creation / CP wizard / Create Content Pack / DA-ITSI-CP-* app authoring / content pack export / "just replace the base searches" / KPI repointing / kpi_base_search disable / search head performance / skipped searches cleanup.
 disable-model-invocation: true
 ---
 
@@ -12,7 +12,7 @@ How to design, build, verify, package, and deploy a custom Splunk ITSI Content P
 
 ## When to use this skill
 
-- Authoring a brand-new ITSI Content Pack from scratch (DB monitoring, business transactions, customer-specific overlay)
+- Authoring a brand-new ITSI Content Pack from scratch (DB monitoring, business transactions, site-specific overlay)
 - Extending the topology under an existing service from a shipped CP (e.g. SIM CP's `Application Performance Monitoring`)
 - Consolidating multiple per-metric base searches into a single shared one before packaging
 - Preparing to run the ITSI **Create Content Pack** wizard
@@ -139,7 +139,7 @@ If your consolidated `base_search` SPL contains *anything* beyond a bare `| msta
 ✅ DO: one CP per coherent domain. Examples that make sense as a single CP:
 - "Database monitoring" (Oracle + Postgres + SQL Server)
 - "Business transaction monitoring" (order-to-cash, invoice processing)
-- "Customer-specific overlay" (Customer-Platform + Customer-CMDB)
+- "Site-specific overlay" (Site-Platform + Site-CMDB)
 
 ❌ DON'T: bundle unrelated things ("all my custom stuff") into one CP. Smaller, focused CPs are easier to install selectively, version independently, and maintain.
 
@@ -148,10 +148,10 @@ If your consolidated `base_search` SPL contains *anything* beyond a bare `| msta
 | Ship a... | When | What you select in the wizard |
 |---|---|---|
 | **Live service** | The CP provides ready-to-use monitoring for a specific deployment (e.g. "Database Oracle" with the consolidated base search) | The service. The wizard pulls KPIs + base search automatically |
-| **Service template** | The CP provides a blueprint that customers instantiate themselves (e.g. "Fulfilment-Orders-* - Platform" — one per perimeter) | The template. New services created from it inherit the KPI set |
+| **Service template** | The CP provides a blueprint that installers instantiate themselves (e.g. "Fulfilment-Orders-* - Platform" — one per perimeter) | The template. New services created from it inherit the KPI set |
 | **Both** | The CP provides both a starter service AND a template for similar instances | Select both; wizard packages each separately |
 
-For DB monitoring: ship a live service per engine (`Database Oracle`, `Database Postgres`), each pre-wired to its consolidated base search. Customers select the service in the wizard CP install flow and get monitoring immediately. No template needed if there's only one DB instance per engine type per customer.
+For DB monitoring: ship a live service per engine (`Database Oracle`, `Database Postgres`), each pre-wired to its consolidated base search. Whoever installs it selects the service in the wizard CP install flow and gets monitoring immediately. No template needed if there's only one DB instance per engine type per deployment.
 
 ### Where do leaves attach in the tree?
 
@@ -340,7 +340,7 @@ UI path: **ITSI → Configuration → Content Library → Create Content Pack** 
 | **App ID** | App folder name (e.g. `DA-ITSI-CP-buttercup-dbm`) | Must start with `DA-ITSI-CP-` by convention. No spaces; kebab-case |
 | **Version** | Semver (e.g. `1.0.0`) | Bump on every export |
 | **Author** | Your name / team | Free text |
-| **Description** | 2-3 sentences: what it provides, prerequisites | Customer-facing |
+| **Description** | 2-3 sentences: what it provides, prerequisites | Shown to whoever installs it |
 | **Icon** | Optional SVG | Skip on first export; add later |
 
 ### Wizard step 2 — Select services
@@ -418,23 +418,23 @@ A category-specific case of the blind spot above. If your CP queries `sim_metric
 | **Shipped templates for databases** | **None.** No `SAMPLE_Oracle_DB`, no `SAMPLE_PostgreSQL`, etc. |
 | **Shipped templates for application middleware** | **None.** No Kafka, Redis, RabbitMQ, etc. |
 
-**Implication**: any CP that queries application-specific O11y metrics MUST also ship (or document) the SignalFlow program. Without it, the customer installs the CP, sees empty KPIs, has no idea what's missing.
+**Implication**: any CP that queries application-specific O11y metrics MUST also ship (or document) the SignalFlow program. Without it, whoever installs the CP sees empty KPIs and has no idea what is missing.
 
 ### Where to put the SignalFlow program
 
 Three options, in increasing order of automation:
 
-| Option | Effort | What customer does on install | When to use |
+| Option | Effort | What the installer does | When to use |
 |---|---|---|---|
-| **(A) Document only** | Lowest | Manually copy-paste SignalFlow text into Splunk UI per program | Single-customer or single-instance; fast to ship |
-| **(B) Sidecar TA app** with `inputs.conf` stanzas | Medium | Install the sidecar TA → modular inputs appear pre-configured | Multi-customer / production-ready |
+| **(A) Document only** | Lowest | Manually copy-paste SignalFlow text into Splunk UI per program | A single deployment or instance; fast to ship |
+| **(B) Sidecar TA app** with `inputs.conf` stanzas | Medium | Install the sidecar TA → modular inputs appear pre-configured | Many deployments / production-ready |
 | **(C) Bundled in the CP itself** | Not possible | n/a | The CP wizard does NOT package modular inputs; this option doesn't exist |
 
 The pragmatic default for a fresh CP is **(A)**: place the SignalFlow text as plain-text files in a `signalflow_programs/` subfolder of the CP's distribution directory, with install steps in the README. The reference DBM CP does this for `oracle_db.signalflow` and `postgres_db.signalflow`.
 
 ### Extracting an existing SignalFlow program from a live ITSI
 
-If a colleague has already configured a working modular input (e.g. the customer's own ops team set up `Oracle_DB`), extract the SignalFlow text via REST so you can ship it:
+If a colleague has already configured a working modular input (e.g. the local ops team set up `Oracle_DB`), extract the SignalFlow text via REST so you can ship it:
 
 ```bash
 TOKEN=$ITSI_TOKEN; URL=$ITSI_URL
@@ -474,9 +474,9 @@ Run through this before opening the wizard. If the answer to any is "yes", you'l
 
 - Does any service in your CP reference a **custom entity type** (one not shipped by an installed dependency CP like SIM)?
 - Do you have a **glass table** that visualizes your services and you want to ship it together?
-- Do you have **deep dives** that the customer should get out of the box?
+- Do you have **deep dives** that should arrive out of the box?
 - Do you have **notable event aggregation policies** that bind to your KPIs?
-- Do you have **modular alert actions** the customer will trigger from KPIs?
+- Do you have **modular alert actions** to be triggered from KPIs?
 - Are you relying on **lookups, macros, props, or transforms** that don't exist on a typical target install? (these CAN be ticked in Step-3 — included in the main CP)
 
 For pure KV-store-content CPs (services + KPIs + base searches + maybe service templates) the answer is "no sidecar needed" — most observability-driven CPs fall here.
@@ -583,8 +583,8 @@ This alternative path is **substantially trickier than building from scratch**. 
 | Use Phase 5b (in-place repoint) when... | Use Phase 5 (full CP install) when... |
 |---|---|
 | The consolidated base search already exists on the target env | You're shipping to a fresh ITSI |
-| Time pressure: the customer needs perf relief NOW | You have time to validate the CP cycle |
-| The cleanup is for one specific deployment, not a reusable artifact | The CP needs to be reusable across customers |
+| Time pressure: the environment needs perf relief NOW | You have time to validate the CP cycle |
+| The cleanup is for one specific deployment, not a reusable artifact | The CP needs to be reusable across deployments |
 | The target env has heavy customization you don't want to overwrite | Greenfield deployment |
 | You want zero risk of accidentally replacing existing services | You're confident the install won't conflict |
 
@@ -668,7 +668,7 @@ for c in new_cols:
 
 **Important corner cases**:
 - **Unit conversions** (bytes → MB, total → rate, cumulative counter → derivative): add as a new column rather than reusing/mutating the existing one. Old KPI thresholds were calibrated to the old unit; preserving the unit semantic preserves the thresholds without recalibration.
-- **Different aggregation semantics** (e.g. consolidated has `rate(deadlocks)` but old KPI was `latest(deadlocks)`): add both. The two are not interchangeable for thresholds — `rate` resets per cycle, `latest` is monotonic since process start. Customers tuning thresholds for one will hate the surprise of the other.
+- **Different aggregation semantics** (e.g. consolidated has `rate(deadlocks)` but old KPI was `latest(deadlocks)`): add both. The two are not interchangeable for thresholds — `rate` resets per cycle, `latest` is monotonic since process start. Anyone tuning thresholds for one will hate the surprise of the other.
 - **Cardinality blockers** (e.g. tablespace metrics that need per-tablespace breakdown): these inherently can't fold into a single-row base search. Keep them on their own dedicated base search. Don't try to be clever — multi-row dimensions explode every other column's cardinality. See the **Tablespace exception** below.
 
 #### 3. Repoint each KPI's three minimum-required fields
@@ -837,7 +837,7 @@ The hidden-state lessons from this session are why this skill exists in its curr
 | Leaving `source_itsi_da` populated to the SIM app name on objects you authored | Objects appear locked/uneditable in the ITSI UI on the target env | Set `source_itsi_da: ""` on all custom objects before packaging |
 | Authoring KPIs against a base search whose `_key` you didn't pin | Wizard pulls in the base search but its `_key` regenerates on install, breaking the KPI's `base_search_id` reference | Verify the wizard's exported `itsi_kpi_template.conf` references the base search by stanza name (it should); never hand-edit the `_key` |
 | Disabling predecessor base searches BEFORE installing the CP | Brief outage between disable and install; SIM CP dashboards show no data | Install the CP first, verify KPIs colored, THEN disable predecessors |
-| Including customer-specific values (CMDB lookups, perimeter values) in the CP | CP is no longer reusable across customers | Keep CMDB lookups in a separate per-customer app; ship only the platform-generic objects in the CP |
+| Including site-specific values (CMDB lookups, perimeter values) in the CP | CP is no longer reusable across deployments | Keep CMDB lookups in a separate per-site app; ship only the platform-generic objects in the CP |
 | **(Phase 5b)** Repointing a KPI's `base_search_id` and assuming the other fields auto-reconcile | `PUT` returns 200; KPI silently emits zero events because `entity_alias_filtering_fields` is `null` or `target_field` still points at the old column | After repoint, always cleanup the four hidden-state fields per the Phase 5b Step 4 table |
 | **(Phase 5b)** Concluding a KPI is broken because `itsi_summary` probe returns no rows | The scheduler is just backed up (the very perf issue you're fixing); KPI is actually fine in the UI | Cross-check Service Analyzer UI before iterating fixes; check `_internal sourcetype=scheduler status=skipped` for the backing search |
 | **(Phase 5b)** Trying to `DELETE` a `kpi_base_search` to stop its load | Splunk Cloud rejects destructive ops on signed-app savedsearches; or you lose the definition and can't roll back | Disable the **backing saved search** at `/servicesNS/nobody/itsi/saved/searches/Indicator - Shared - <key> - ITSI Search/disable` |
@@ -850,10 +850,10 @@ The hidden-state lessons from this session are why this skill exists in its curr
 | Anti-pattern | Why it's bad | Fix |
 |---|---|---|
 | Writing the CP's `.conf` files by hand instead of using the wizard | Brittle; easy to miss required fields; doesn't validate against ITSI's KV-store schema; no way to test before export | Always build live in ITSI, run the wizard. The wizard handles the conf serialization correctly |
-| One giant CP bundling everything custom for a customer | Hard to install selectively; updates ship as all-or-nothing; long install reviews | Smaller, focused CPs per logical domain |
+| One giant CP bundling everything custom for one deployment | Hard to install selectively; updates ship as all-or-nothing; long install reviews | Smaller, focused CPs per logical domain |
 | Versioning by date (`2026-06-10`) instead of semver | Can't tell what changed between versions; hard to communicate breakage | Use semver (`1.0.0`, `1.1.0`, `2.0.0`); track changes in CHANGELOG.md |
 | Skipping the README and BUG_FIXES files | Future consultants don't know what the CP does, what versions it was tested against, or what's broken | Always document. 30 minutes upfront saves hours of forensics later |
-| Treating Phase 5 cleanup as optional | The CP's value to the customer is partly the search-head load reduction from disabling predecessor objects; without cleanup, you've added objects without removing the redundant ones | Always disable predecessors as part of the install playbook |
+| Treating Phase 5 cleanup as optional | The CP's value is partly the search-head load reduction from disabling predecessor objects; without cleanup, you've added objects without removing the redundant ones | Always disable predecessors as part of the install playbook |
 | Modifying the shipped SIM content pack instead of forking via overlay CP | Next Splunk Cloud admin-portal upgrade silently reverts your changes | Ship a separate overlay CP (`DA-ITSI-CP-sim-os-hosts-fixed`, your DB monitoring CP, etc.) — never edit shipped content |
 | Selecting "all services" in the wizard "to be safe" | Pulls in other consultants' content; export is huge; install fails on the target env due to objects already present | Select only the services that are YOURS to ship |
 

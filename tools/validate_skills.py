@@ -3,7 +3,7 @@
 
 Checks the SKILL.md frontmatter contract, keeps the README index and the plugin
 manifest in step with what is actually on disk, and refuses anything that looks
-like a real customer or site-specific identifier.
+like a real organisation or site-specific identifier.
 
     validate_skills.py                 full check of this repository
     validate_skills.py --scan PATH...   identifier check on arbitrary skills
@@ -49,7 +49,7 @@ FORBIDDEN = [
     (re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\."), "JWT"),
 ]
 
-# Specific customer, partner, and environment names are held as SHA-256 digests of the
+# Specific organisation, partner, and environment names are held as SHA-256 digests of the
 # lowercased word. Storing them in clear text here would publish, in a public repo,
 # exactly the identifiers this check exists to keep out of it. Add one with:
 #
@@ -58,19 +58,19 @@ FORBIDDEN = [
 # Substring forms (a name embedded in a hostname) are caught instead by the
 # unrecognised-hostname check below, which works from an allow-list.
 DENY_DIGESTS = {
-    "3e46aed850183180e1777d724c59e617fe50f6b11253e3b23e57d2cc9f1c814f": "customer name",
-    "3df303d788879992fe67ba18c411762a9751cd22dc0e511a5b919759f3686787": "customer hostname fragment",
-    "86a18e6f11b02b39d554b16421d86b512627d0c422f83a84ad4e19b848401765": "customer name",
+    "3e46aed850183180e1777d724c59e617fe50f6b11253e3b23e57d2cc9f1c814f": "organisation name",
+    "3df303d788879992fe67ba18c411762a9751cd22dc0e511a5b919759f3686787": "hostname fragment",
+    "86a18e6f11b02b39d554b16421d86b512627d0c422f83a84ad4e19b848401765": "organisation name",
     "882ae4fc6f8d1979b8244d8bb093e5f7602bee0802f0732e3fd348844d89ca8f": "lab hostname",
     "20c57ec903dd4b97240ef1b69f86060494a181c43cc31784ba7a1dd84efb1b90": "stack hostname",
     "398e945f5817a68454aa66babba19b7b6b0f433901ec36e026e92dfe44dd7f4e": "personal username",
-    "2558310e6bf593925763d96f37571887d0a9a64599e6dc5541cac5cbb9181d2d": "customer name",
-    "f1308241eb02418033bca0183ceda2f65c40923e3b3210b87b057b492a3d1fbf": "customer perimeter name",
-    "72d2cdc1909424897e2b5679a7908f584f2782526c943b5cd06ff6615eff0985": "customer perimeter name",
-    "513d80034937ac1341ed0fd0013946e742f776f8dc3adee5b5a1e50987b3dfde": "customer application name",
+    "2558310e6bf593925763d96f37571887d0a9a64599e6dc5541cac5cbb9181d2d": "organisation name",
+    "f1308241eb02418033bca0183ceda2f65c40923e3b3210b87b057b492a3d1fbf": "perimeter name",
+    "72d2cdc1909424897e2b5679a7908f584f2782526c943b5cd06ff6615eff0985": "perimeter name",
+    "513d80034937ac1341ed0fd0013946e742f776f8dc3adee5b5a1e50987b3dfde": "application name",
     "80b7ff16ded9c7587dc18b5e7e6d5e091bc3319e954f0a15c4f3b511963c1a2e": "personal name",
-    "c7cf074f027be20fd9cef6e29c679c020a4ee9ade23d94438d5149ca33e63e9f": "customer system ID",
-    "0cc6af186804ec14414e0e761fc8067da2f53ade90362e396fd55dabcd6d7b74": "customer system ID",
+    "c7cf074f027be20fd9cef6e29c679c020a4ee9ade23d94438d5149ca33e63e9f": "system ID",
+    "0cc6af186804ec14414e0e761fc8067da2f53ade90362e396fd55dabcd6d7b74": "system ID",
 }
 
 # A host-naming convention leaks an environment even when the domain is a
@@ -80,15 +80,15 @@ DENY_DIGESTS = {
 # FQDN. So these are digests of the prefix, tested against every leading substring
 # of each word -- which keeps the prefixes themselves out of this file.
 DENY_PREFIX_DIGESTS = {
-    "09b0f033a7b54ac1a34773cca0453dd28bcb22558336efaa9a4d8a91c706aeb8": "customer hostname prefix",
-    "4d068e20277ff7ecb4c6e1e0a488715c817bf15016557730d9e0d79bf5fe2627": "customer hostname prefix",
-    "c60e52eb1720141d957920b24e86e713e3ee476de28c583b084bf5811d1b7d5d": "customer hostname prefix",
-    "e864382fa5e9e4f1b5fb41f52ce05f736dfa75af793cfe905277b198426b6a41": "customer hostname prefix",
-    "76925cd32f347bde91cea0e42ae2798de7421e4a02f3802aeb711dfab6f4a375": "customer hostname prefix",
-    "b2a54e138bc6c04433c522d56bccd210cf0cc2241dcdfe17c8ef9772d15ec641": "customer hostname prefix",
-    "0d6dfa80c1ac20dfe1197e99cffeaa7eff396b5133b0546138777e95944b2773": "customer hostname prefix",
-    "3d063448dac60727713bb6973308752581229fd8566285946b068e7ee4fcb15d": "customer hostname prefix",
-    "ab1820a8ccaa3f210334931ab62bec14bbda5b46af78d9875791ec13a4892501": "customer hostname prefix",
+    "09b0f033a7b54ac1a34773cca0453dd28bcb22558336efaa9a4d8a91c706aeb8": "hostname prefix",
+    "4d068e20277ff7ecb4c6e1e0a488715c817bf15016557730d9e0d79bf5fe2627": "hostname prefix",
+    "c60e52eb1720141d957920b24e86e713e3ee476de28c583b084bf5811d1b7d5d": "hostname prefix",
+    "e864382fa5e9e4f1b5fb41f52ce05f736dfa75af793cfe905277b198426b6a41": "hostname prefix",
+    "76925cd32f347bde91cea0e42ae2798de7421e4a02f3802aeb711dfab6f4a375": "hostname prefix",
+    "b2a54e138bc6c04433c522d56bccd210cf0cc2241dcdfe17c8ef9772d15ec641": "hostname prefix",
+    "0d6dfa80c1ac20dfe1197e99cffeaa7eff396b5133b0546138777e95944b2773": "hostname prefix",
+    "3d063448dac60727713bb6973308752581229fd8566285946b068e7ee4fcb15d": "hostname prefix",
+    "ab1820a8ccaa3f210334931ab62bec14bbda5b46af78d9875791ec13a4892501": "hostname prefix",
 }
 
 # Below four characters a prefix collides with ordinary words.
@@ -108,14 +108,14 @@ if os.path.exists(DENY_DIGESTS_PATH):
 WORD = re.compile(r"[A-Za-z][A-Za-z0-9.-]{2,}")
 
 # Hostnames and addresses that are explicitly allowed as documentation examples.
-# Matched with fullmatch, so a customer label in front of one of these still
+# Matched with fullmatch, so an organisation label in front of one of these still
 # fails: 'observability.splunkcloud.com' is allowed but
-# 'customerx.observability.splunkcloud.com' is not.
+# 'orgname.observability.splunkcloud.com' is not.
 ALLOWED_TOKENS = re.compile(
     r"buttercup[a-z0-9-]*\.(?:observability\.)?splunkcloud\.com"
     # Product endpoints shared by every tenant, so they identify nobody. The
     # realm is required to look like a realm ('eu1'), which is what stops a
-    # customer name being waved through as a subdomain.
+    # organisation name being waved through as a subdomain.
     r"|observability\.splunkcloud\.com"
     r"|(?:app|api|ingest)\.[a-z]{2}\d\.signalfx\.com"
     r"|127\.0\.0\.1"
@@ -124,7 +124,7 @@ ALLOWED_TOKENS = re.compile(
 )
 
 # Any host or address not on the allow-list above is treated as a real identifier.
-# A customer name embedded in a hostname (customerx.splunkcloud.com) is the most
+# An organisation name embedded in a hostname (orgname.splunkcloud.com) is the most
 # likely way one escapes review, so this fails the build rather than warning.
 SUSPICIOUS = [
     (re.compile(r"\b(?:[a-z0-9][a-z0-9-]*\.)+splunkcloud\.com\b", re.I), "hostname"),

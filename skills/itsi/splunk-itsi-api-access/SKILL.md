@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-api-access
 category: itsi
-description: Access a Splunk ITSI Search Head over REST API. Covers prerequisites the customer must arrange (IP allowlist, dedicated REST tokens), JWT vs MCP token shapes, capabilities needed, 401 troubleshooting, common endpoint cheatsheet (itoa_interface/event_management_interface), search jobs oneshot vs async dispatches, notable event index gotchas, proxy egress configuration for loopback/internal subnets, and a shell helper template.
+description: Access a Splunk ITSI Search Head over REST API. Covers prerequisites a Splunk admin must arrange (IP allowlist, dedicated REST tokens), JWT vs MCP token shapes, capabilities needed, 401 troubleshooting, common endpoint cheatsheet (itoa_interface/event_management_interface), search jobs oneshot vs async dispatches, notable event index gotchas, proxy egress configuration for loopback/internal subnets, and a shell helper template.
 disable-model-invocation: true
 ---
 
@@ -14,19 +14,19 @@ How to get a Splunk ITSI Search Head reachable over REST from your machine, with
 ## When to use this skill
 
 - Setting up REST access to a Splunk ITSI Search Head (Cloud or on-prem) for the first time
-- The customer just gave you a "token" and you get `401 call not properly authenticated`
+- You have been handed a "token" and you get `401 call not properly authenticated`
 - A `curl` to `:8089` times out — diagnosing whether it's the network or auth
 - Bootstrapping a shell helper for repeated REST calls
-- Designing a project's prerequisites list to send to the customer's Splunk admin
+- Designing a project's prerequisites list to send to the Splunk admin
 - The user mentions ITSI API, itoa_interface, SA-ITOA, MCP token vs API token
 
-## Prerequisites the customer must arrange
+## Prerequisites the Splunk admin must arrange
 
 This is the email you send before you touch anything. Get all five before promising you can do API work:
 
 1. **URL of the ITSI SH on port 8089.** Splunk Cloud format: `https://<stack>.splunkcloud.com:8089`. The stack name is the same one used in the Web UI URL minus the protocol, port, and path.
 2. **IP allowlist entry for your egress IP** (or VPN range). Splunk Cloud ships with the management port behind an allowlist; without your IP in there, every curl will time out, not 401. Verify your IP with `curl -s ifconfig.me` and send that exact value.
-3. **A dedicated REST API token** — *not* an MCP token, not a session key. See the next section for why this matters. Ask the customer to create it via `Settings → Tokens → New Token` with audience like `cursor-api-access`, expiration `+90d` or `Never` per their policy.
+3. **A dedicated REST API token** — *not* an MCP token, not a session key. See the next section for why this matters. Ask the Splunk admin to create it via `Settings → Tokens → New Token` with audience like `cursor-api-access`, expiration `+90d` or `Never` per their policy.
 4. **A user account with the right capabilities** — see the capabilities section. If the token is bound to a user who doesn't have `write_itsi_service`, your CRUD calls will fail with 403 even though auth succeeds.
 5. **A safe sandbox naming convention** (you bring this, not them) — see the related skill `splunk-itsi-service-tree-design` for the SANDBOX-* prefix pattern that protects production trees during exploration.
 
@@ -52,7 +52,7 @@ print(json.loads(b64decode(header)))   # confirms it's a JWT
 print(json.loads(b64decode(payload)))  # check 'aud' claim — "Cursor API access" good, "MCP server" bad
 ```
 
-The trip-wire: a customer admin who has only ever issued MCP tokens for Cursor will often hand you the MCP token because it's labeled "Cursor". Always read the `aud` claim before debugging connectivity.
+The trip-wire: an admin who has only ever issued MCP tokens for Cursor will often hand you the MCP token because it's labeled "Cursor". Always read the `aud` claim before debugging connectivity.
 
 ## Capabilities you actually need
 
@@ -90,7 +90,7 @@ When something fails against `:8089`, work through these in order. The HTTP code
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `curl: (28) Connection timed out` | IP not in allowlist | Send your egress IP to the customer's Splunk admin |
+| `curl: (28) Connection timed out` | IP not in allowlist | Send your egress IP to the Splunk admin |
 | `curl: (60) SSL certificate problem` | On-prem SH with self-signed cert | Add `-k` for testing only; for prod, install the CA |
 | `HTTP=303 See Other` against `https://<stack>.splunkcloud.com/...` (no port) | You hit the web UI port (443) instead of management (8089) | Use `:8089` explicitly; the web port redirects authenticated REST through `splunkd/__raw` which has its own quirks |
 | `HTTP=401 call not properly authenticated` (with `Bearer`) | Token rejected. Try `Splunk` scheme as a quick check, then check token shape | If `Splunk` also 401s, the token is invalid/expired/wrong audience. Go back to "Token types" |
@@ -314,7 +314,7 @@ python3 -c "p='$HOME/.cursor/scripts/itsi'; open(p,'wb').write(open(p,'rb').read
 |---|---|---|
 | Using an MCP token for REST and blaming connectivity for the 401 | Wastes hours; the token is technically valid but scoped wrong | Always decode JWT payload and check `aud` claim before troubleshooting connectivity |
 | Hitting `https://<stack>.splunkcloud.com/services/...` (port 443) for REST | Returns 303 or goes through `splunkd/__raw` web proxy which mangles bodies | Use `:8089` direct |
-| Storing the token in `.zshrc` or any always-shell-loaded file with `chmod 644` | Anyone with file read on your machine has it | Put in a dedicated `.env` file at `~/.cursor/<customer>.env` with `chmod 600`, source on demand |
+| Storing the token in `.zshrc` or any always-shell-loaded file with `chmod 644` | Anyone with file read on your machine has it | Put in a dedicated `.env` file at `~/.cursor/<environment>.env` with `chmod 600`, source on demand |
 | Pasting the token into chat/Slack/email | Leaks into transcripts and indexed search | If you must, mark for rotation, treat as compromised at the end of the project, and never use in prod |
 | Adding `-k` (insecure SSL) reflexively for Splunk Cloud | Splunk Cloud uses real certs; `-k` masks misconfiguration | Only `-k` for on-prem self-signed; for cloud, fix root cause if cert fails |
 | Mixing JSON body with `/services/*` form endpoints | Returns 200 with empty body; silent no-op | JSON for `/itoa_interface/*`, form for `/services/*` |

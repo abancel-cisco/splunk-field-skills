@@ -1,7 +1,7 @@
 ---
 name: splunk-dashboard-studio-rest
 category: platform
-description: Create Splunk Dashboard Studio (v2) dashboards programmatically via the REST `data/ui/views` endpoint — same `splunk.singlevalue` tiles + `absolute` layout you'd put in an ITSI Glass Table, but using the actively-maintained native renderer. Covers the `<dashboard version="2"><definition><![CDATA[<JSON>]]></definition></dashboard>` XML wrapper, the form-encoded POST body with `name` + `eai:data`, the `defaults.dataSources['ds.search']` shape (NOT `defaults.dataSources['global']` like glass tables — this is a real, undocumented difference), embedding backdrop images as data URIs (`splunk-enterprise-kvstore://` is ITSI-glass-table-only and does not resolve in Dashboard Studio), the `itsi` app context required so the `get_full_itsi_summary_kpi(<kpi_id>)` macro resolves, the SHKPI-<service_id> KPI ID convention for Service Health Scores, and the explicit recommendation to use Dashboard Studio over ITSI Glass Tables whenever the customer doesn't strictly require GT-specific features (swap services, ITSI-only annotations). Use when a customer asks for a service-flow visualisation that needs to be code-driven, when an ITSI Glass Table renders as a black screen (always pivot to DS), when you want a dashboard that scales reliably across Splunk Cloud minor versions, or when batching dashboard creation across an environment.
+description: Create Splunk Dashboard Studio (v2) dashboards programmatically via the REST `data/ui/views` endpoint — same `splunk.singlevalue` tiles + `absolute` layout you'd put in an ITSI Glass Table, but using the actively-maintained native renderer. Covers the `<dashboard version="2"><definition><![CDATA[<JSON>]]></definition></dashboard>` XML wrapper, the form-encoded POST body with `name` + `eai:data`, the `defaults.dataSources['ds.search']` shape (NOT `defaults.dataSources['global']` like glass tables — this is a real, undocumented difference), embedding backdrop images as data URIs (`splunk-enterprise-kvstore://` is ITSI-glass-table-only and does not resolve in Dashboard Studio), the `itsi` app context required so the `get_full_itsi_summary_kpi(<kpi_id>)` macro resolves, the SHKPI-<service_id> KPI ID convention for Service Health Scores, and the explicit recommendation to use Dashboard Studio over ITSI Glass Tables whenever you don't strictly require GT-specific features (swap services, ITSI-only annotations). Use when someone asks for a service-flow visualisation that needs to be code-driven, when an ITSI Glass Table renders as a black screen (always pivot to DS), when you want a dashboard that scales reliably across Splunk Cloud minor versions, or when batching dashboard creation across an environment.
 disable-model-invocation: true
 ---
 
@@ -15,7 +15,7 @@ Build a Splunk Dashboard Studio v2 dashboard end-to-end from a Python script: en
 
 ## When to use
 
-- Customer asks for a service-flow map, executive overview, or sequential-flow visualisation that ties multiple ITSI services together
+- Someone asks for a service-flow map, executive overview, or sequential-flow visualisation that ties multiple ITSI services together
 - An ITSI Glass Table renders as a black screen → pivot to Dashboard Studio (this skill)
 - You need a dashboard that round-trips reliably across Splunk Cloud point releases
 - You want dashboard creation to be idempotent / replayable (CI/CD, multi-environment rollout)
@@ -445,7 +445,7 @@ https://<stack>.splunkcloud.com/en-GB/app/<APP>/<NAME>
 | Hosting an ITSI-macro dashboard in the `search` app | `get_full_itsi_summary_kpi` doesn't resolve; data sources fail with "macro not found" | Host in `itsi` app, OR qualify as `SA-ITOA:get_full_itsi_summary_kpi(...)` |
 | Using `name='My Cool Dashboard'` | URL slug breaks (spaces, capitals); some browsers refuse the URL | `name` must be lowercase alphanumeric + underscores; put the friendly title in `<label>` |
 | Editing the dashboard in the GUI after a script run, then re-running the script | UI changes are silently discarded by the next DELETE+POST | Treat the script as the source of truth; commit it to the project repo |
-| Generating a corporate logo from scratch | Trademark / brand integrity issues; customer will reject | Download the real logo (Wikimedia Commons public-domain trademark files, or the customer's brand portal) |
+| Generating a corporate logo from scratch | Trademark / brand integrity issues; the brand owner will reject it | Download the real logo (Wikimedia Commons public-domain trademark files, or the organisation's brand portal) |
 
 ## Related skills
 

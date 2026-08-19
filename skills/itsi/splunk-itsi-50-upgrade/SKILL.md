@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-50-upgrade
 category: itsi
-description: Upgrade Splunk IT Service Intelligence to 5.0 on a single-instance or distributed on-prem lab — prerequisites, Splunk Enterprise co-upgrade, backup before upgrade, ITSI package extraction (not splunk install app), SA-IndexCreation on indexers, post-upgrade validation, and rollback. Covers direct upgrade from 4.21.x (within three-version rule), compatibility matrix checks, Python 3 ordering no longer applies on Splunk 10.x, and version-specific post-install tasks. Use when upgrading a lab or customer stack to ITSI 5.0, planning maintenance windows for Splunk+ITSI co-upgrade, creating pre-upgrade backups, or rolling back a failed ITSI upgrade.
+description: Upgrade Splunk IT Service Intelligence to 5.0 on a single-instance or distributed on-prem lab — prerequisites, Splunk Enterprise co-upgrade, backup before upgrade, ITSI package extraction (not splunk install app), SA-IndexCreation on indexers, post-upgrade validation, and rollback. Covers direct upgrade from 4.21.x (within three-version rule), compatibility matrix checks, Python 3 ordering no longer applies on Splunk 10.x, and version-specific post-install tasks. Use when upgrading a lab or production stack to ITSI 5.0, planning maintenance windows for Splunk+ITSI co-upgrade, creating pre-upgrade backups, or rolling back a failed ITSI upgrade.
 disable-model-invocation: true
 ---
 

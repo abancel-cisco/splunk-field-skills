@@ -53,7 +53,7 @@ skills directory.
 |---|---|
 | [`splunk-itsi-api-access`](skills/itsi/splunk-itsi-api-access/SKILL.md) | Reach an ITSI search head over REST: token shapes, required capabilities, IP allowlisting, 401 triage, proxy egress. |
 | [`splunk-itsi-safety-guidelines`](skills/itsi/splunk-itsi-safety-guidelines/SKILL.md) | Rules for agents operating on a live ITSI stack — what never to modify, and why. **Read this first.** |
-| [`splunk-itsi-service-tree-design`](skills/itsi/splunk-itsi-service-tree-design/SKILL.md) | Design and build a service tree over REST without disturbing existing customer content. |
+| [`splunk-itsi-service-tree-design`](skills/itsi/splunk-itsi-service-tree-design/SKILL.md) | Design and build a service tree over REST without disturbing content owned by others. |
 | [`splunk-itsi-entity-binding-architecture`](skills/itsi/splunk-itsi-entity-binding-architecture/SKILL.md) | The four-layer chain that makes KPIs actually scope to the right entities under a service. |
 | [`splunk-itsi-entity-cmdb-lookup`](skills/itsi/splunk-itsi-entity-cmdb-lookup/SKILL.md) | Build a CSV-based mini-CMDB to enrich entities with business context machine data can't supply. |
 | [`splunk-itsi-kpi-creation-via-api`](skills/itsi/splunk-itsi-kpi-creation-via-api/SKILL.md) | Create and modify KPIs at scale over REST — clone a working KPI to N services, switch metrics in a shared base search. |
@@ -103,7 +103,7 @@ surface with no API behind it, the skill says so rather than inventing a workaro
 ## Contributing
 
 Pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) — the important
-rules are that contributions must carry no customer-identifying information, and that
+rules are that contributions must identify no real organisation, and that
 every skill states the product versions it was validated against.
 
 ## Policies

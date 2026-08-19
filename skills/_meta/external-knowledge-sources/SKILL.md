@@ -81,7 +81,7 @@ visualization hints.
   cloud, network, storage, DB, identity, security, IoT/OT, and more).
 - You are **designing ITSI KPIs / base searches** and want a vetted starting query + the CIM
   mapping and criticality for a metric.
-- You want to **scope a project** by technology domain, or map customer requirements to
+- You want to **scope a project** by technology domain, or map stated requirements to
   concrete monitoring use cases.
 - You need **detections** or compliance-framework coverage (GDPR, NIS2, DORA, ISO 27001, etc.).
 
@@ -96,7 +96,7 @@ visualization hints.
 - Prefer the **CIM `tstats`** variant over raw `search` in high-volume environments.
 - Prefer `stats` over `transaction` unless session grouping is strictly required.
 - SPL is a **starting point**: adjust index names, thresholds, time ranges, and the assumed
-  App/TA to the customer's environment before use.
+  App/TA to your own environment before use.
 - Cite the specific **UC-ID** (e.g. `UC-1.1.1`) when you carry a use case into a deliverable.
 
 ---

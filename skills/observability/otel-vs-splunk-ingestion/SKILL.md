@@ -1,7 +1,7 @@
 ---
 name: otel-vs-splunk-ingestion
 category: observability
-description: Decision framework for picking the right data collection method in a Splunk ITSI / Observability Cloud project. Compares OTel Collector (Splunk Distribution) native receivers vs Splunk Universal Forwarder vs Splunk DB Connect vs commercial JMS / third-party add-ons. Strong default toward OTel native receivers (oracledbreceiver, sqlserverreceiver, jmxreceiver, filelog, hostmetrics, tibcoems) on dev instances; covers when UF or DB Connect is justified. Use when designing data ingestion for a Splunk project, populating the `Collection Method/Agent` column in a KPI tracker, deciding between OTel and UF / DB Connect for a given source, when the user mentions OTel collector / SIM / hostmetrics / jmxreceiver / DB Connect / HEC / JMS modular input / deployment server / OpAmp / TA sourcetype compatibility, or when the customer's prod ingestion uses a commercial add-on you cannot replicate on a dev tenant.
+description: Decision framework for picking the right data collection method in a Splunk ITSI / Observability Cloud project. Compares OTel Collector (Splunk Distribution) native receivers vs Splunk Universal Forwarder vs Splunk DB Connect vs commercial JMS / third-party add-ons. Strong default toward OTel native receivers (oracledbreceiver, sqlserverreceiver, jmxreceiver, filelog, hostmetrics, tibcoems) on dev instances; covers when UF or DB Connect is justified. Use when designing data ingestion for a Splunk project, populating the `Collection Method/Agent` column in a KPI tracker, deciding between OTel and UF / DB Connect for a given source, when the user mentions OTel collector / SIM / hostmetrics / jmxreceiver / DB Connect / HEC / JMS modular input / deployment server / OpAmp / TA sourcetype compatibility, or when a production environment ingests through a commercial add-on you cannot replicate on a dev tenant.
 disable-model-invocation: true
 ---
 
@@ -16,14 +16,14 @@ How to pick the right data collection mechanism for a Splunk project. Default-to
 - Designing data ingestion for a Splunk ITSI or Observability Cloud project
 - Populating the `Collection Method/Agent` column in a KPI or Data Sources tracker
 - Asked "should I use UF or OTel for this?"
-- The customer's production uses a commercial add-on (e.g. JMS Modular Input) and you need to demonstrate parity on a dev instance without licensing it
+- Production uses a commercial add-on (e.g. JMS Modular Input) and you need to demonstrate parity on a dev instance without licensing it
 - Designing a Per-Host Ingestion plan
 - Picking between OTel native receivers vs Splunk DB Connect for database telemetry
 
 ## The default rule
 
 > **On a dev instance, prefer the OTel Collector (Splunk Distribution) with native receivers.**
-> Reach for UF / DB Connect / commercial add-ons only when OTel can't do the job or the customer's prod will use them and parity matters.
+> Reach for UF / DB Connect / commercial add-ons only when OTel can't do the job or production will use them and parity matters.
 
 Three reasons OTel is the default in 2026:
 
@@ -49,7 +49,7 @@ Data source = file log (text logs, JSON logs, structured app logs)
   -> OTel filelog receiver. Configure multiline / encoding / time format as needed.
      Fallback: UF only if filelog can't handle the format (extremely rare in 2026),
               if a TA has to consume the data under its own sourcetype, or if the
-              customer's ops team standardizes on UF.
+              the ops team standardizes on UF.
 
 Data source = message-broker queue depths / message rates
   -> The OTel receiver for your broker (tibcoems, kafkametrics, rabbitmq,
@@ -63,7 +63,7 @@ Data source = message-broker queue depths / message rates
 Data source = Oracle DB metrics / health
   -> OTel oracledbreceiver. Needs read-only DB user.
      Fallback to Splunk DB Connect ONLY if:
-       a) customer already runs DB Connect in prod and ops parity matters, OR
+       a) DB Connect already runs in production and ops parity matters, OR
        b) you need a custom SQL query oracledbreceiver doesn't ship a metric for
           -> use OTel sqlqueryreceiver before falling back to DB Connect.
 
@@ -84,7 +84,7 @@ Data source = SAP application data (ECC, PI/PO, S/4)
 Data source = generic JMS - ActiveMQ, IBM MQ, other JMS providers
   -> OTel kafkareceiver if Kafka. For ActiveMQ/IBM MQ:
      a) check OTel contrib for a native receiver,
-     b) if customer uses Splunk Connect for Kafka in prod, use it for parity,
+     b) if production uses Splunk Connect for Kafka, use it for parity,
      c) commercial JMS Modular Input only as last resort (paid add-on,
         production-tested, may be required for parity).
 
@@ -124,7 +124,7 @@ The `sim_metrics` index is the default created by the SIM (Splunk Infrastructure
 
 Don't use UF reflexively. But it's the right call when:
 
-1. **Customer ops team already runs UF at scale** and won't accept introducing a second agent for this project. Pick your battles.
+1. **The ops team already runs UF at scale** and won't accept introducing a second agent for this project. Pick your battles.
 2. **Configuration has to be managed from Splunk itself.** A deployment server plus `serverclass.conf` pushes inputs and apps to thousands of forwarders, and withdraws them again, from inside the platform the team already administers. OTel has no equivalent yet: OpAmp is the right direction and worth tracking, but until it is there you are managing collector config with Ansible / Puppet / Chef or a Kubernetes operator. That is a second toolchain for the same fleet, and often a second team — which is a real objection from an ops group, not a preference.
 3. **An add-on has to work end to end.** A TA's props, transforms, eventtypes and CIM mappings are all keyed on sourcetype, and so is any ITSI or ES content sitting on top of them. Change how the data arrives and none of it fires. You can make OTel emit the sourcetype and the shape a TA expects, but then you have reimplemented the add-on's contract and you own it at every future TA release. UF plus the TA gives you the whole chain, search-time logic included — which for a deep TA like Splunk_TA_nix is most of its value, ingestion being the smaller part.
 4. **You need scripted inputs that aren't easily wrapped by OTel filelog** (e.g. running a CLI command and ingesting its stdout). Possible in OTel via `execreceiver`, but UF's `[script://]` input is older and more battle-tested.
@@ -136,10 +136,10 @@ When you do use UF, document the reason in the Data Sources tab: `UF (justificat
 
 Almost never as your first choice in 2026, but legitimate when:
 
-1. **Customer's prod uses DB Connect** and your dev instance must demonstrate operational parity.
+1. **Production already uses DB Connect** and your dev instance must demonstrate operational parity.
 2. **You need a database type the OTel ecosystem doesn't have a receiver for** (rare; check `otel-collector-contrib` repo first).
 3. **The KPI needs a transactional query** that fits the DB Connect "input scheduler with checkpoints" model better than OTel sqlqueryreceiver's polling.
-4. **The OTel receiver exists only as `otel-collector-contrib` and the customer's risk policy refuses contrib-only components** (i.e. they want an enterprise-supported path). DB Connect is a Splunk-supported add-on; OTel contrib receivers are community-maintained.
+4. **The OTel receiver exists only as `otel-collector-contrib` and the organisation's risk policy refuses contrib-only components** (i.e. they want an enterprise-supported path). DB Connect is a Splunk-supported add-on; OTel contrib receivers are community-maintained.
 
 When you do use DB Connect: document the trade-off (extra JVM agent on the SH or HF, separate add-on lifecycle, separate credential storage, no native metric typing — you build metrics from query results).
 
@@ -155,17 +155,17 @@ read it as a preference.
 
 ## When commercial / third-party JMS add-ons are justified
 
-This is a specific gotcha. Pattern: customer's production uses a paid Splunk add-on (a JMS or broker input from Splunkbase, say). They show you a dashboard built from that data. Your dev instance does not have the license. The question becomes: *can we replicate the result with OTel + free tools?*
+This is a specific gotcha. Pattern: production uses a paid Splunk add-on (a JMS or broker input from Splunkbase, say), and there is a dashboard built on that data which the dev instance is expected to reproduce — without the licence. The question becomes: *can the result be replicated with OTel and free tools?*
 
 Approach:
-1. **Don't replicate the exact ingestion**. The customer's prod ingestion is theirs; you don't need to mirror it.
+1. **Don't replicate the exact ingestion**. The production ingestion belongs to the platform team; you don't need to mirror it.
 2. **Decompose the dashboard into the KPIs it shows.** Usually it's a few KPI families: queue depth, message rate, error rate, throughput per topic.
 3. **Map each KPI family to an OTel-native equivalent**:
    - Queue depth -> the OTel receiver for your broker (tibcoems, kafkametrics, rabbitmq...)
    - Message rate -> same receivers
    - Error rate -> OTel filelog on the broker's error log + extraction
 4. **Build the equivalent dashboard on the dev instance** from those KPIs.
-5. **Document the gap explicitly** in the tracker: "Customer's prod uses <paid add-on>. The dev instance demonstrates equivalent KPIs via <OTel receiver> + filelog. Licensing decision for prod = customer's commercial track."
+5. **Document the gap explicitly** in the tracker: "Production uses <paid add-on>. The dev instance demonstrates equivalent KPIs via <OTel receiver> + filelog. Licensing decision for prod = the platform team's commercial track."
 
 This is honest (you're not pretending to be the commercial tool), demonstrates value (you can do most of what they need without paying the commercial tag), and respects the boundary (don't propose to rip out a working prod tool).
 
@@ -231,7 +231,7 @@ Give each row its own Status, owner, and `Feeds KPI(s)` reference, so every inge
 
 ## Documenting the decision in the tracker
 
-In the Data Sources tab, the `Collection Method` column should be precise enough that an SE who's never seen the customer can replicate the design:
+In the Data Sources tab, the `Collection Method` column should be precise enough that somebody who has never seen the environment can replicate the design:
 
 Good:
 - `OTel filelog receiver (multiline regex: ^\d{4}-\d{2}-\d{2}; encoding: utf-8)`
@@ -253,4 +253,4 @@ Bad (vague):
 
 Treat SignalFx and HEC tokens as credentials throughout. Keep them in the collector's
 environment or a secret store, never in a tracker, a config committed to a repository, or
-a document shared with the customer.
+a document shared outside your own team.

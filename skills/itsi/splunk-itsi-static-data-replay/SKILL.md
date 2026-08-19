@@ -103,7 +103,7 @@ Expect real `alert_value`, `alert_level=2`, `sev=normal` (not `-1`/`unknown`). `
 
 ## Honesty
 
-This is a demo workaround, not a data-quality fix. Say so to the customer: KPI values are real, the *timing* is synthetic. The real fix is a live feed (or event-time-correct backfill). Keep the macro name self-documenting (e.g. `*_src`, comment the replay lines) so nobody ships it to production by accident.
+This is a demo workaround, not a data-quality fix. Say so to whoever reads the dashboard: KPI values are real, the *timing* is synthetic. The real fix is a live feed (or event-time-correct backfill). Keep the macro name self-documenting (e.g. `*_src`, comment the replay lines) so nobody ships it to production by accident.
 
 ## Related skills
 

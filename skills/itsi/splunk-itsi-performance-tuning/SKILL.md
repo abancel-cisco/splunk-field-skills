@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 # ITSI Performance Tuning — What Stock ITSI Ships Overscheduled, and How to Fix It
 
-How to find and disable the search-head load that ITSI's default configuration creates without you asking for it. Tested on a real customer engagement (~50% reduction in daily skipped searches from disabling 4 + reschedule 4 default-overscheduled searches).
+How to find and disable the search-head load that ITSI's default configuration creates without you asking for it. Tested on a real production stack (~50% reduction in daily skipped searches from disabling 4 + reschedule 4 default-overscheduled searches).
 
 ## The thesis
 
@@ -45,7 +45,7 @@ Three structural reasons stock ITSI saturates the scheduler:
 
 3. **Content packs that install fully scheduled**: The SIM CP, SAP CP, SAI app, etc. each install 20-100 saved searches scheduled `*/5 * * * *` from day one. There's no "soft activation" — installing the CP costs you the full scheduler load immediately, even if zero entities map to it yet.
 
-The natural consequence: a typical Splunk Cloud customer who installs the standard set of CPs ends up with **800+ scheduled searches running continuously**, most of which never had a chance to be justified.
+The natural consequence: a typical Splunk Cloud deployment carrying the standard set of CPs ends up with **800+ scheduled searches running continuously**, most of which never had a chance to be justified.
 
 ## The 5-probe audit (the diagnostic procedure)
 
@@ -65,7 +65,7 @@ Look at the top 25. If the top offenders are:
 - `Indicator - Shared - <hash> - ITSI Search` — a KPI base search. Tune its cron, or consolidate.
 - `ITSI Import Objects - *` / `service_health_*` / `disabled_kpis_*` — default ITSI housekeeping. **All over-scheduled.**
 - Anything from `Splunk App for Infrastructure Alerts` — often orphaned from a deprecated install.
-- Saved searches in an obscure app — likely customer-installed for a workflow that's no longer used.
+- Saved searches in an obscure app — likely installed locally for a workflow that is no longer used.
 
 The "reason" field will be one of:
 - `The maximum number of concurrent historical scheduled searches on this instance has been reached` → global scheduler saturation
@@ -209,7 +209,7 @@ The savedsearches you'll be touching live in the `itsi` app namespace, NOT `SA-I
 - KPI base search KV definitions → `SA-ITOA` namespace (via `itoa_interface/kpi_base_search`)
 - Their backing saved searches → `itsi` namespace (via `saved/searches`)
 - ITSI engine housekeeping searches → `itsi` namespace
-- Splunk app saved searches (any third-party / customer-installed app) → the owning app's namespace
+- Splunk app saved searches (any third-party / locally installed app) → the owning app's namespace
 
 When unsure, hit `/servicesNS/-/-/saved/searches/<encoded name>` — the `-` wildcards let Splunk find it across all (user, app) tuples.
 
@@ -246,7 +246,7 @@ These look unused but aren't. Touching them breaks things in non-obvious ways.
 | DON'T disable | Why it looks tempting | What it actually does |
 |---|---|---|
 | `kvstore_to_json_backup_for_itsi_*` | Runs daily, generates large summary | Backs up the ITSI KV store. If you disable, you have no rollback path |
-| `SI Audit - *` (Splunk Itsi Audit) | Few people look at audit logs | Some compliance regimes require these. Verify with the customer first |
+| `SI Audit - *` (Splunk Itsi Audit) | Few people look at audit logs | Some compliance regimes require these. Verify with the compliance owner first |
 | `ITSI Notable Event Search` | Slow, runs continuously | Drives the entire Notable Event / Episode pipeline. Disabling breaks alerts |
 | Anything starting with `_audit_*` | Looks like an audit support search | Drives internal correctness checks for ITSI's KV store consistency |
 | `Service Monitoring - Engine` (and friends) | Heavy | This IS the engine. Service Analyzer goes blank if disabled |
@@ -294,9 +294,9 @@ If no parent is found, the acceleration is orphaned — disable it via the stand
 ### Real-world orphan example
 
 Daily skips: 1,691 (the #1 single offender on a reference engagement). Savedsearch name pattern:
-`_ACCELERATE_<GUID>_<customer-installed-app>_nobody_<hash>_ACCELERATE_`
+`_ACCELERATE_<GUID>_<locally-installed-app>_nobody_<hash>_ACCELERATE_`
 
-Neither the parent app's data models nor its saved searches exposed a matching parent. This is the classic orphan pattern. When in doubt about a third-party app's acceleration, surface it to the customer (it's in their app, not Splunk-shipped); if they confirm orphaned, one POST and ~1,700 daily skips disappear.
+Neither the parent app's data models nor its saved searches exposed a matching parent. This is the classic orphan pattern. When in doubt about a third-party app's acceleration, surface it to the app's owner (it's in their app, not Splunk-shipped); if they confirm orphaned, one POST and ~1,700 daily skips disappear.
 
 ## Splunk concurrency math (so you know when you've optimized enough)
 
@@ -399,7 +399,7 @@ Plus indirect effects from freeing scheduler slots: previously-skipped KPI base 
 Projected post-tuning baseline: **~8,500-9,500 skips/day** (vs 18,434), a 50%+ reduction with zero risk and zero user-visible impact.
 
 Larger items NOT done in this round (require user judgment):
-- The orphaned `_ACCELERATE_<GUID>` job in the customer-installed app (1,691 daily skips, but it's in customer's own app)
+- The orphaned `_ACCELERATE_<GUID>` job in the locally installed app (1,691 daily skips, but it belongs to another team)
 - Disabling 12 unbound SAP CP template services (~460 phantom KPIs, ~30 base searches' worth of load)
 - Slowing SAP-ABAP-* base searches from 5min → 10min
 
