@@ -1,7 +1,7 @@
 ---
 name: otel-vs-splunk-ingestion
 category: observability
-description: Decision framework for picking the right data collection method in a Splunk ITSI / Observability Cloud project. Compares OTel Collector (Splunk Distribution) native receivers vs Splunk Universal Forwarder vs Splunk DB Connect vs commercial JMS / third-party add-ons. Strong default toward OTel native receivers (oracledbreceiver, sqlserverreceiver, jmxreceiver, filelog, hostmetrics, tibcoems) on dev instances; covers when UF or DB Connect is justified. Use when designing data ingestion for a Splunk project, populating the `Collection Method/Agent` column in a KPI tracker, deciding between OTel and UF / DB Connect for a given source, when the user mentions OTel collector / SIM / hostmetrics / jmxreceiver / DB Connect / HEC / JMS modular input, or when the customer's prod ingestion uses a commercial add-on you cannot replicate on a dev tenant.
+description: Decision framework for picking the right data collection method in a Splunk ITSI / Observability Cloud project. Compares OTel Collector (Splunk Distribution) native receivers vs Splunk Universal Forwarder vs Splunk DB Connect vs commercial JMS / third-party add-ons. Strong default toward OTel native receivers (oracledbreceiver, sqlserverreceiver, jmxreceiver, filelog, hostmetrics, tibcoems) on dev instances; covers when UF or DB Connect is justified. Use when designing data ingestion for a Splunk project, populating the `Collection Method/Agent` column in a KPI tracker, deciding between OTel and UF / DB Connect for a given source, when the user mentions OTel collector / SIM / hostmetrics / jmxreceiver / DB Connect / HEC / JMS modular input / deployment server / OpAmp / TA sourcetype compatibility, or when the customer's prod ingestion uses a commercial add-on you cannot replicate on a dev tenant.
 disable-model-invocation: true
 ---
 
@@ -29,7 +29,7 @@ Three reasons OTel is the default in 2026:
 
 1. **Single agent, multiple receivers.** One installed binary handles host metrics, JMX, file logs, OS perfcounters, DB queries, JMS, traces. Fewer things to provision / open ports for / monitor.
 2. **Splunk Cloud forward roadmap.** Splunk has clearly bet on OTel as the modern ingestion path for both Splunk Enterprise / Cloud (logs/metrics) and Splunk Observability Cloud (traces/RUM/metrics). UF and DB Connect are maintenance-mode.
-3. **Customer ops simplicity at scale.** OTel collectors are config-driven (YAML), versioned, idempotent. UF and DB Connect have their own deploy/management surface that scales worse.
+3. **Config as code.** A collector's configuration is a YAML file: versioned, reviewable, idempotent, and reproducible from your repository rather than from the state of a server's app tree. Be honest about the trade-off, though — that file still has to be *delivered*, and OTel has no Splunk-side equivalent of the deployment server. This is the one dimension where UF is ahead, not behind (see "When UF is still justified").
 
 ## Decision tree per data source type
 
@@ -47,8 +47,9 @@ Data source = JVM / JBoss / Tomcat / application-server JMX
 
 Data source = file log (text logs, JSON logs, structured app logs)
   -> OTel filelog receiver. Configure multiline / encoding / time format as needed.
-     Fallback: UF only if filelog can't handle the format (extremely rare in 2026)
-              or if customer's ops team standardizes on UF.
+     Fallback: UF only if filelog can't handle the format (extremely rare in 2026),
+              if a TA has to consume the data under its own sourcetype, or if the
+              customer's ops team standardizes on UF.
 
 Data source = message-broker queue depths / message rates
   -> The OTel receiver for your broker (tibcoems, kafkametrics, rabbitmq,
@@ -124,9 +125,10 @@ The `sim_metrics` index is the default created by the SIM (Splunk Infrastructure
 Don't use UF reflexively. But it's the right call when:
 
 1. **Customer ops team already runs UF at scale** and won't accept introducing a second agent for this project. Pick your battles.
-2. **You need TA-driven extraction at search time** (e.g. a deep TA like Splunk_TA_nix where the value is in the search-time logic and not just data ingestion). UF + TA gives you that out of the box.
-3. **You need scripted inputs that aren't easily wrapped by OTel filelog** (e.g. running a CLI command and ingesting its stdout). Possible in OTel via `execreceiver`, but UF's `[script://]` input is older and more battle-tested.
-4. **Bandwidth-constrained edge sites** where UF's tested compression / deduplication is more optimized than OTel's current state.
+2. **Configuration has to be managed from Splunk itself.** A deployment server plus `serverclass.conf` pushes inputs and apps to thousands of forwarders, and withdraws them again, from inside the platform the team already administers. OTel has no equivalent yet: OpAmp is the right direction and worth tracking, but until it is there you are managing collector config with Ansible / Puppet / Chef or a Kubernetes operator. That is a second toolchain for the same fleet, and often a second team — which is a real objection from an ops group, not a preference.
+3. **An add-on has to work end to end.** A TA's props, transforms, eventtypes and CIM mappings are all keyed on sourcetype, and so is any ITSI or ES content sitting on top of them. Change how the data arrives and none of it fires. You can make OTel emit the sourcetype and the shape a TA expects, but then you have reimplemented the add-on's contract and you own it at every future TA release. UF plus the TA gives you the whole chain, search-time logic included — which for a deep TA like Splunk_TA_nix is most of its value, ingestion being the smaller part.
+4. **You need scripted inputs that aren't easily wrapped by OTel filelog** (e.g. running a CLI command and ingesting its stdout). Possible in OTel via `execreceiver`, but UF's `[script://]` input is older and more battle-tested.
+5. **Bandwidth-constrained edge sites** where UF's tested compression / deduplication is more optimized than OTel's current state.
 
 When you do use UF, document the reason in the Data Sources tab: `UF (justification: <reason>)` rather than just `UF`.
 
