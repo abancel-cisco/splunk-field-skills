@@ -7,8 +7,16 @@
 #
 # These are object identifiers in public documentation, not credentials. They
 # grant no access on their own and are meaningless outside the stack that issued
-# them. The allow-list below is scoped to skill Markdown and to lines that
-# actually use the `_key` field, so a genuine credential elsewhere still fails.
+# them.
+#
+# The allow-lists below match on line content only, and deliberately carry no
+# `paths` criterion. A `paths` entry excuses every rule for the files it matches,
+# so scoping these to `^skills/.*\.md$` would mean no secret of any kind could
+# ever be reported inside a skill -- which is precisely where one would land.
+# `condition = "AND"` does not constrain it either; that key has no effect on
+# gitleaks 8.30.1. Verified with a probe file: while `paths` was present, a
+# synthetic `secret =`, `apitoken:` and `password =` all went unreported; with it
+# removed all three are caught and the documented `_key` UUID still passes.
 #
 # Real credentials are referenced in this repository only through environment
 # variables (ITSI_URL, ITSI_TOKEN) and never as literals.
@@ -17,8 +25,7 @@
 useDefault = true
 
 [[allowlists]]
-description = "Splunk KV store _key fields and ITSI object UUIDs in skill documentation"
-paths = ['''^skills/.*\.md$''']
+description = "Splunk KV store _key fields and ITSI object UUIDs in documentation"
 regexTarget = "line"
 regexes = [
   # a line using Splunk's _key field: "_key":"...", _key=..., <svc_key>, etc.
@@ -27,7 +34,6 @@ regexes = [
 
 [[allowlists]]
 description = "Documented environment-variable credential references"
-paths = ['''^skills/.*\.md$''', '''^(README|CONTRIBUTING|SECURITY|DISCLAIMER|SUPPORT)\.md$''']
 regexTarget = "line"
 regexes = [
   '''os\.environ\[["'](?:ITSI_URL|ITSI_TOKEN)["']\]''',

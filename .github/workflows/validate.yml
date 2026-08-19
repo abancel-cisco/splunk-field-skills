@@ -40,3 +40,8 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The action's default gitleaks predates the [[allowlists]] table and
+          # ignores it silently, so .gitleaks.toml had no effect here and every
+          # documented `_key` UUID was reported as a generic API key. Pinned rather
+          # than 'latest' so an upstream rule change cannot fail an unrelated push.
+          GITLEAKS_VERSION: 8.30.1
