@@ -151,9 +151,9 @@ POST   /event_management_interface/notable_event_group/<key>?is_partial_data=1 -
 Filter shortcut (URL-encoded JSON in the `filter` param):
 
 ```bash
-# Get only the service whose title is "Buttercup-Invoicing"
+# Get only the service whose title is "Invoicing"
 curl -G "$URL/servicesNS/nobody/SA-ITOA/itoa_interface/service" \
-  --data-urlencode 'filter={"title":"Buttercup-Invoicing"}' \
+  --data-urlencode 'filter={"title":"Invoicing"}' \
   --data-urlencode 'output_mode=json' \
   --data-urlencode 'fields=title,_key' \
   -H "Authorization: Bearer $TOKEN"

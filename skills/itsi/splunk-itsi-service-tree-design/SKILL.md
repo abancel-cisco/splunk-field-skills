@@ -13,7 +13,7 @@ How to design a service tree for a multi-perimeter solution and build it safely 
 
 ## When to use this skill
 
-- Designing the "service glue" for a solution that spans multiple systems (Buttercup-Middleware, Buttercup-ERP, Buttercup-Fulfilment, etc.)
+- Designing the "service glue" for a solution that spans multiple systems (Middleware, ERP, Fulfilment, etc.)
 - Joining an ITSI environment where another owner already has services and you must not touch theirs
 - Bootstrapping a tree from REST API rather than the UI (faster, repeatable, version-controllable)
 - Recovering from a half-built tree (orphan services, broken deps, prefix sprawl)
@@ -29,22 +29,22 @@ The layer count stays at three (parent → perimeter → leaf). Inside each peri
 
 | Layer | Purpose | Examples | Has KPIs? |
 |---|---|---|---|
-| **Top parent** (1) | The programme | `Acme Observability` | No (rollup only) |
-| **Perimeter rollups** (4-6) | One per business/system perimeter | `Buttercup-Middleware`, `Buttercup-Fulfilment`, `Buttercup-Invoicing`, `Buttercup-ERP`, `End-to-End Business Transactions` | Rollup only (no direct KPIs) |
+| **Top parent** (1) | The programme | `Buttercup Observability` | No (rollup only) |
+| **Perimeter rollups** (4-6) | One per business/system perimeter | `Middleware`, `Fulfilment`, `Invoicing`, `ERP`, `End-to-End Business Transactions` | Rollup only (no direct KPIs) |
 | **Leaf services** (organized in 3 pillars per perimeter) | See pillar pattern below | YES — actual KPIs land here |
 
 #### The three-pillar pattern (per perimeter)
 
 ```
-Buttercup-Middleware  (perimeter rollup)
+Middleware  (perimeter rollup)
  ├── Platform                                        (infra metrics from OS/VM data)
- │    ├── Buttercup-Bus   - Platform                 ← 6 OS KPIs (CPU, Mem, Disk R/W, Net R/T)
- │    └── Buttercup-Queue - Platform                 ← 6 OS KPIs
+ │    ├── Middleware-Bus   - Platform                 ← 6 OS KPIs (CPU, Mem, Disk R/W, Net R/T)
+ │    └── Middleware-Queue - Platform                 ← 6 OS KPIs
  ├── Functional                                      (app-specific KPIs from app logs/traces)
- │    ├── Buttercup-Bus   - Integration Engines      ← e.g., process count, queue depth, errors/s
- │    └── Buttercup-Queue - JMS Queues               ← e.g., pending message count, throughput
+ │    ├── Middleware-Bus   - Integration Engines      ← e.g., process count, queue depth, errors/s
+ │    └── Middleware-Queue - JMS Queues               ← e.g., pending message count, throughput
  └── App Health      (optional)                      (combined health view, or alerting wrapper)
-      └── Buttercup-Middleware - Overall App Health  ← rolls up Platform + Functional severities
+      └── Middleware - Overall App Health            ← rolls up Platform + Functional severities
 ```
 
 Why three pillars (Platform / Functional / App Health):
@@ -57,17 +57,17 @@ Why three pillars (Platform / Functional / App Health):
 
 This separation is what lets you say "the Platform is fine but the Functional has alarms" — a sentence operations teams actually need to say.
 
-Resist the temptation to go 4 levels deep on day 1 (e.g., adding a "Buttercup-Fulfilment → Buttercup-Orders → Buttercup-Orders - Platform → Buttercup-Orders - Platform - Linux Hosts"). You can always insert intermediate layers later; you cannot easily collapse them. The Service Topology view also gets unreadable past 3 layers wide for a single perimeter.
+Resist the temptation to go 4 levels deep on day 1 (e.g., adding a "Fulfilment → Fulfilment-Orders → Fulfilment-Orders - Platform → Fulfilment-Orders - Platform - Linux Hosts"). You can always insert intermediate layers later; you cannot easily collapse them. The Service Topology view also gets unreadable past 3 layers wide for a single perimeter.
 
 ### 1b. The "End-to-End Business Transactions" perimeter
 
-A 5th-or-6th sibling perimeter (peer of Buttercup-Middleware/Buttercup-Fulfilment/Buttercup-ERP/etc.) dedicated to cross-perimeter user journeys:
+A 5th-or-6th sibling perimeter (peer of Middleware/Fulfilment/ERP/etc.) dedicated to cross-perimeter user journeys:
 
 ```
 End-to-End Business Transactions  (perimeter rollup)
- ├── Order-to-Cash                  ← spans Buttercup-ERP → Buttercup-Middleware → Buttercup-Fulfilment → Buttercup-Invoicing
- ├── Procure-to-Pay                 ← spans Buttercup-Invoicing → Buttercup-ERP → Buttercup-Fulfilment
- ├── Invoice Processing             ← spans Buttercup-DocCapture → Buttercup-ERP-App → Buttercup-ERP-DB
+ ├── Order-to-Cash                  ← spans ERP → Middleware → Fulfilment → Invoicing
+ ├── Procure-to-Pay                 ← spans Invoicing → ERP → Fulfilment
+ ├── Invoice Processing             ← spans Invoicing-Capture → ERP-App → ERP-DB
  └── ...
 ```
 
@@ -81,40 +81,40 @@ KPI sources for E2E:
 
 ### 2. Naming convention is your contract
 
-Pick a convention before you create anything and stick to it. The one we settled on for Acme (and recommend for similar deployments):
+Pick a convention before you create anything and stick to it. The one we settled on (and recommend for similar deployments):
 
 ```
 <PERIMETER>[-<SUBSYSTEM>] - <PILLAR>
-  Buttercup-Middleware                     ← perimeter rollup, no pillar suffix
-  Buttercup-Bus - Platform                 ← leaf, "Platform" pillar
-  Buttercup-Bus - Integration Engines      ← leaf, "Functional" pillar (no suffix, but a descriptive title)
-  Buttercup-Queue - Platform
-  Buttercup-Queue - JMS Queues             ← Functional leaf
-  Buttercup-Orders - Platform
-  Buttercup-Batch - Platform
-  Buttercup-Desktop - Platform
-  Buttercup-Invoices - Platform
-  Buttercup-DocCapture - Platform
-  Buttercup-ERP-App - Platform             ← (owned by another consultant in the example)
-  End-to-End Business Transactions         ← top-level perimeter for E2E
-  Order-to-Cash                            ← E2E leaf
+  Middleware                            ← perimeter rollup, no pillar suffix
+  Middleware-Bus - Platform             ← leaf, "Platform" pillar
+  Middleware-Bus - Integration Engines  ← leaf, "Functional" pillar (no suffix, but a descriptive title)
+  Middleware-Queue - Platform
+  Middleware-Queue - JMS Queues         ← Functional leaf
+  Fulfilment-Orders - Platform
+  Fulfilment-Batch - Platform
+  Fulfilment-Desktop - Platform
+  Invoicing-App - Platform
+  Invoicing-Capture - Platform
+  ERP-App - Platform                    ← (owned by another consultant in the example)
+  End-to-End Business Transactions      ← top-level perimeter for E2E
+  Order-to-Cash                         ← E2E leaf
 ```
 
 Why this works:
 - Alphabetical sort groups perimeter+subsystem together in the picker
 - The `- Platform` suffix is grep-able for bulk operations (`filter by title regex "- Platform$"`)
 - The rollup is always shorter than its leaves (visual scanning)
-- The program-level parent (`Acme - ...`) sorts above everything
+- The program-level parent (`Buttercup Observability`) sorts above everything
 
-What to avoid: `ITSI-`, `SVC-`, `Acme-` prefixes — they add no information and waste 5 chars on every screen.
+What to avoid: `ITSI-`, `SVC-`, or the organisation's name as a prefix on every service — they add no information and waste 5 chars on every screen. The top parent is the one place the organisation name belongs, because there is only one of it.
 
 ### 2b. Standard suffixes by pillar
 
 | Pillar | Suffix convention | Example |
 |---|---|---|
-| Platform | `- Platform` (always exactly this) | `Buttercup-Orders - Platform` |
-| Functional | descriptive title, no canonical suffix | `Buttercup-Orders - JBoss Processes`, `Buttercup-Orders - JVM Metrics` |
-| App Health (optional rollup) | `- App Health` | `Buttercup-Fulfilment - App Health` |
+| Platform | `- Platform` (always exactly this) | `Fulfilment-Orders - Platform` |
+| Functional | descriptive title, no canonical suffix | `Fulfilment-Orders - JBoss Processes`, `Fulfilment-Orders - JVM Metrics` |
+| App Health (optional rollup) | `- App Health` | `Fulfilment - App Health` |
 | E2E | descriptive business-transaction name | `Order-to-Cash`, `Invoice Processing` |
 
 The Platform suffix is rigid because it drives the bulk Layer-2 entity rule (`info.service matches "<lowercased title>"`) and the bulk replication script in `splunk-itsi-kpi-creation-via-api`. Inconsistent suffixes break the automation.
@@ -131,7 +131,7 @@ This pattern survives them refactoring their tree, lets them delete sandbox cont
 
 ## The 3-phase safe-build flow
 
-This is the flow we executed for Acme and the one I'd repeat every time. It's slower than "just create the tree" by maybe 30 minutes, and saves you from a 4-hour cleanup if something is off.
+This is the flow we executed and the one I'd repeat every time. It's slower than "just create the tree" by maybe 30 minutes, and saves you from a 4-hour cleanup if something is off.
 
 ```
 ┌──────────────────────────┐
@@ -173,25 +173,25 @@ ITSI dependencies are unidirectional, set at create time via `services_depends_o
 For a tree like:
 
 ```
-Acme (top parent)
- ├── Buttercup-Middleware
- │    ├── Buttercup-Middleware - Integration Bus
- │    └── Buttercup-Middleware - Message Queue
- ├── Buttercup-Fulfilment
- │    └── Buttercup-Fulfilment - JBoss
+Buttercup (top parent)
+ ├── Middleware
+ │    ├── Middleware - Integration Bus
+ │    └── Middleware - Message Queue
+ ├── Fulfilment
+ │    └── Fulfilment - JBoss
  └── ...
 ```
 
 Create order is leaves → rollups → parent:
 
 ```
-1. Buttercup-Middleware - Integration Bus  (no deps)   -> capture _key_bus
-2. Buttercup-Middleware - Message Queue    (no deps)   -> capture _key_queue
-3. Buttercup-Middleware                    (deps: bus, queue)
-4. Buttercup-Fulfilment - JBoss            (no deps)   -> capture _key_jb
-5. Buttercup-Fulfilment                    (deps: jb)
+1. Middleware - Integration Bus  (no deps)   -> capture _key_bus
+2. Middleware - Message Queue    (no deps)   -> capture _key_queue
+3. Middleware                    (deps: bus, queue)
+4. Fulfilment - JBoss            (no deps)   -> capture _key_jb
+5. Fulfilment                    (deps: jb)
 6. ... (other perimeters same way)
-7. Acme                                    (deps: Buttercup-Middleware, Buttercup-Fulfilment, ...)
+7. Buttercup                     (deps: Middleware, Fulfilment, ...)
 ```
 
 This avoids the second-pass-to-wire pattern (which works but doubles your API calls and the failure surface).
@@ -202,7 +202,7 @@ This avoids the second-pass-to-wire pattern (which works but doubles your API ca
 
 ```json
 {
-  "title": "Buttercup-Middleware - Integration Bus",
+  "title": "Middleware - Integration Bus",
   "description": "Integration bus engine health and throughput.",
   "enabled": 1,
   "sec_grp": "default_itsi_security_group"
@@ -222,18 +222,18 @@ POST to `/servicesNS/nobody/SA-ITOA/itoa_interface/service`. Response body is th
 
 ```json
 {
-  "title": "Buttercup-Middleware",
+  "title": "Middleware",
   "description": "Middleware perimeter rollup.",
   "enabled": 1,
   "sec_grp": "default_itsi_security_group",
   "services_depends_on": [
     {
-      "serviceid": "<_key of Buttercup-Middleware - Integration Bus>",
-      "kpis_depending_on": ["SHKPI-<_key of Buttercup-Middleware - Integration Bus>"]
+      "serviceid": "<_key of Middleware - Integration Bus>",
+      "kpis_depending_on": ["SHKPI-<_key of Middleware - Integration Bus>"]
     },
     {
-      "serviceid": "<_key of Buttercup-Middleware - Message Queue>",
-      "kpis_depending_on": ["SHKPI-<_key of Buttercup-Middleware - Message Queue>"]
+      "serviceid": "<_key of Middleware - Message Queue>",
+      "kpis_depending_on": ["SHKPI-<_key of Middleware - Message Queue>"]
     }
   ]
 }
@@ -253,13 +253,13 @@ You don't create it explicitly. It just exists. So if you have a service with `_
 
 ### Partial update (rename without losing other fields)
 
-The cutover from `SANDBOX-Buttercup-Middleware` to `Buttercup-Middleware` is a single field change. The full-object POST works but is risky — you have to re-send every field exactly or you'll wipe one out. Use partial update instead:
+The cutover from `SANDBOX-Middleware` to `Middleware` is a single field change. The full-object POST works but is risky — you have to re-send every field exactly or you'll wipe one out. Use partial update instead:
 
 ```bash
 curl -sS -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Buttercup-Middleware"}' \
+  -d '{"title":"Middleware"}' \
   "$URL/servicesNS/nobody/SA-ITOA/itoa_interface/service/<_key>?is_partial_data=1"
 ```
 

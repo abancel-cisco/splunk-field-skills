@@ -40,7 +40,7 @@ Data source = host CPU / memory / disk / network
 Data source = Windows perf counters / event logs
   -> OTel windowsperfcountersreceiver + windowseventlogreceiver. Always.
 
-Data source = JVM / JBoss / Tomcat / TIBCO BW engine JMX
+Data source = JVM / JBoss / Tomcat / application-server JMX
   -> OTel jmxreceiver. Localhost no-auth is fine if collector is on same host.
      Fallback: jmx_exporter -> OTel prometheusreceiver if jmxreceiver doesn't
      fit your beans.
@@ -50,14 +50,14 @@ Data source = file log (text logs, JSON logs, structured app logs)
      Fallback: UF only if filelog can't handle the format (extremely rare in 2026)
               or if customer's ops team standardizes on UF.
 
-Data source = TIBCO EMS queue depths / message rates
-  -> OTel tibcoems receiver. Needs read-only EMS admin svc account + queue list.
-     Caveat: the tibcoems receiver lives in otel-collector-contrib (not the
-     Splunk Distribution core); it is functional but not flagged GA-stable.
-     Documented exception: when the customer wants an enterprise-supported
-     path AND already has a Heavy Forwarder, use Splunk DB Connect on the HF
-     with the TIBCO EMS JDBC driver against EMS admin SQL. See
-     "Exception case: TIBCO EMS via DB Connect on a Heavy Forwarder" below.
+Data source = message-broker queue depths / message rates
+  -> The OTel receiver for your broker (tibcoems, kafkametrics, rabbitmq,
+     activemq...). Expect to need a read-only admin account and, often, an
+     explicit list of the queues to watch.
+     Caveat: several broker receivers live in otel-collector-contrib rather
+     than the Splunk Distribution core. They work, but they are not flagged
+     GA-stable, and some risk policies refuse a contrib-only component on a
+     path to production. See "When DB Connect is still justified" below.
 
 Data source = Oracle DB metrics / health
   -> OTel oracledbreceiver. Needs read-only DB user.
@@ -80,7 +80,7 @@ Data source = SAP application data (ECC, PI/PO, S/4)
   -> PowerConnect for SAP. Not negotiable; OTel doesn't have an SAP ABAP-aware
      collector. PowerConnect runs ABAP-side and pushes via HEC.
 
-Data source = JMS (non-EMS) - ActiveMQ, IBM MQ, generic JMS
+Data source = generic JMS - ActiveMQ, IBM MQ, other JMS providers
   -> OTel kafkareceiver if Kafka. For ActiveMQ/IBM MQ:
      a) check OTel contrib for a native receiver,
      b) if customer uses Splunk Connect for Kafka in prod, use it for parity,
@@ -106,10 +106,10 @@ A reference table for the `Collection Method/Agent` column in a Splunk project t
 | Host CPU/Mem/Disk/Net | `OTel hostmetrics` | `sim_metrics` | `host_metrics (OTel)` |
 | Windows perfcounters | `OTel windowsperfcounters` | `sim_metrics` | `winperf (OTel)` |
 | Windows event log | `OTel windowseventlog` | `windows` | `WinEventLog` |
-| JBoss / Tomcat / TIBCO BW JMX | `OTel jmxreceiver` | `sim_metrics` | `jmx (OTel)` |
-| TIBCO EMS queues (default) | `OTel tibcoems receiver` | `sim_metrics` or `tibco` | `tibco:ems` |
-| TIBCO EMS queues (HF-routed exception) | `Splunk DB Connect on HF (JDBC to TIBCO EMS admin SQL)` | `tibco` (event-based) → derived metrics | `tibco:ems_queue_stats` |
-| App log files (Linux/Windows) | `OTel filelog receiver` | `<perimeter>` (e.g. `middleware`, `fulfilment`) | `<vendor>:<component>` (e.g. `tibco:bw`, `jboss:server`) |
+| JBoss / Tomcat / application-server JMX | `OTel jmxreceiver` | `sim_metrics` | `jmx (OTel)` |
+| Message-broker queues (default) | `OTel receiver for the broker (tibcoems, kafkametrics, rabbitmq...)` | `sim_metrics` or `<perimeter>` | `<vendor>:<component>` |
+| Message-broker queues (no usable receiver) | `Splunk DB Connect on a heavy forwarder (JDBC to the broker's admin interface)` | `<perimeter>` (event-based) → derived metrics | `<vendor>:<component>_stats` |
+| App log files (Linux/Windows) | `OTel filelog receiver` | `<perimeter>` (e.g. `middleware`, `fulfilment`) | `<vendor>:<component>` (e.g. `jboss:server`, `broker:queue`) |
 | Oracle metrics | `OTel oracledbreceiver` (native) | `<perimeter>_db` | `oracle (OTel native)` |
 | SQL Server metrics | `OTel sqlserverreceiver` (native) | `<perimeter>_db` | `mssql (OTel native)` |
 | Custom DB query | `OTel sqlqueryreceiver` | `<perimeter>_db` | `oracle:custom` or similar |
@@ -141,51 +141,29 @@ Almost never as your first choice in 2026, but legitimate when:
 
 When you do use DB Connect: document the trade-off (extra JVM agent on the SH or HF, separate add-on lifecycle, separate credential storage, no native metric typing — you build metrics from query results).
 
-### Exception case: TIBCO EMS via DB Connect on a Heavy Forwarder
-
-Documented exception observed at Acme (1 Jun 2026, partner-led engagement). Pattern recognition for similar customers:
-
-**When this case applies**
-- Customer's production currently uses the commercial **JMS Messaging Modular Input** (Splunkbase #1317) — and that license is **not** available on the dev instance.
-- The OTel `tibcoems` receiver is technically capable but lives in `otel-collector-contrib`; the customer's ops/security team won't accept a contrib-only component for the dev-to-prod path.
-- The customer already has (or is standing up) a **Splunk Heavy Forwarder** in the dev environment.
-
-**The arrangement**
-- DB Connect installed on the **Heavy Forwarder** (not the search head).
-- TIBCO EMS exposes admin data via a SQL-like interface; DB Connect connects via JDBC using a TIBCO-supplied driver.
-- A read-only EMS admin user is provisioned for DB Connect.
-- DB Connect's scheduled inputs poll EMS at a fixed interval (typically 30-60s for queue stats), producing events that get forwarded to Splunk Cloud / ITSI. A summary index or metric-store conversion job then turns the per-queue rows into time series for ITSI Glass Tables.
-
-**Hard dependencies (track as project milestones)**
-1. HF live in the dev environment, with outbound connectivity to Splunk Cloud.
-2. Splunk DB Connect installed + Java runtime on the HF.
-3. TIBCO EMS JDBC driver available (vendor-supplied; not on Splunkbase).
-4. Read-only EMS admin user credentials provisioned by the customer.
-5. Network path opened from HF → TIBCO EMS host (default 7222).
-
-**KPI coverage with this approach** (per-queue, polled): queue depth, consumer count, message throughput in/out, dead-message count, redelivery counters, queue-pending growth rate. Server-level metrics (active connections, EMS availability) are covered via the same admin SQL interface.
-
-**What this approach does NOT give you** (vs the JMS Modular Input in customer prod): per-message tracing (msgTrace), per-message error payloads (errorLog), full audit-trail content. Document these as "production audit pipeline; out of scope on the dev instance".
-
-**Documentation pattern in the tracker**
-- KPIs `Collection Method/Agent` column: `Splunk DB Connect on HF (JDBC to TIBCO EMS admin SQL)`
-- Data Sources `Add-App/Add-on` column: `Splunk DB Connect (HF-side)`
-- Per-Host `Target` column for the EMS server row: `TIBCO EMS reached over JDBC from HF (Splunk DB Connect; admin SQL queries)`
-- Always add a tracker note explicitly calling out that this is an exception to the OTel default and why.
+Reason 4 turns up most often with message brokers, several of which expose their admin
+statistics through a SQL-like interface that a JDBC driver can query. Two things are
+worth knowing before you commit to it. Put DB Connect on a heavy forwarder rather than
+the search head, so the polling and its JVM stay off the box serving user searches. And
+budget for a conversion step: a scheduled input yields one event per object per poll, so
+a summary index or metric-store job has to turn those rows into the time series a KPI
+reads — which is the work the OTel receiver would have done for you. Record it in the
+tracker as an exception to the OTel default, with the reason, so the next person doesn't
+read it as a preference.
 
 ## When commercial / third-party JMS add-ons are justified
 
-This is a specific gotcha. Pattern: customer's production uses a paid Splunk add-on (e.g. `JMS Messaging Modular Input` from Splunkbase, paid). They show you a dashboard built from that data. Your dev instance does not have the license. The question becomes: *can we replicate the result with OTel + free tools?*
+This is a specific gotcha. Pattern: customer's production uses a paid Splunk add-on (a JMS or broker input from Splunkbase, say). They show you a dashboard built from that data. Your dev instance does not have the license. The question becomes: *can we replicate the result with OTel + free tools?*
 
 Approach:
 1. **Don't replicate the exact ingestion**. The customer's prod ingestion is theirs; you don't need to mirror it.
 2. **Decompose the dashboard into the KPIs it shows.** Usually it's a few KPI families: queue depth, message rate, error rate, throughput per topic.
 3. **Map each KPI family to an OTel-native equivalent**:
-   - Queue depth -> OTel tibcoems receiver (for TIBCO EMS) or OTel kafkareceiver (for Kafka)
+   - Queue depth -> the OTel receiver for your broker (tibcoems, kafkametrics, rabbitmq...)
    - Message rate -> same receivers
    - Error rate -> OTel filelog on the broker's error log + extraction
 4. **Build the equivalent dashboard on the dev instance** from those KPIs.
-5. **Document the gap explicitly** in the tracker: "Customer's prod uses Splunkbase #1317 (JMS Modular Input). The dev instance demonstrates equivalent KPIs via OTel tibcoems receiver + filelog. Licensing decision for prod = customer's commercial track."
+5. **Document the gap explicitly** in the tracker: "Customer's prod uses <paid add-on>. The dev instance demonstrates equivalent KPIs via <OTel receiver> + filelog. Licensing decision for prod = customer's commercial track."
 
 This is honest (you're not pretending to be the commercial tool), demonstrates value (you can do most of what they need without paying the commercial tag), and respects the boundary (don't propose to rip out a working prod tool).
 
@@ -203,7 +181,7 @@ Without a sample the means to implement is unconfirmed, so treat the KPI as prov
 
 Use the **Splunk Distribution of OpenTelemetry Collector** rather than upstream OpenTelemetry. Reasons:
 
-1. **Pre-built receivers for Splunk-specific sources** (e.g. tibcoems receiver is in the Splunk Distribution).
+1. **A curated receiver set with Splunk-tested defaults**, so you are not assembling and vetting a collector build yourself.
 2. **HEC exporter pre-wired** for sending to Splunk Cloud.
 3. **SignalFx exporter pre-wired** for Observability Cloud.
 4. **Splunk support boundary** when something breaks in prod.
@@ -247,7 +225,7 @@ Give each row its own Status, owner, and `Feeds KPI(s)` reference, so every inge
 | Trying to replicate a commercial add-on's exact ingestion on a dev instance | Wastes time, can't do it without license | Decompose to KPIs, build equivalent via OTel, document the boundary |
 | Using `em_metrics` as the SIM index | Outdated; SIM uses `sim_metrics` by default | `sim_metrics` everywhere |
 | Multiple OTel collectors on one host (one per perimeter) | Adds packaging burden, port conflicts | One collector per host with multiple receiver configs |
-| Sourcetype `tibco` for everything from TIBCO | Loses the ability to apply per-component extractions | Per-component sourcetype (`tibco:bw`, `tibco:ems`, `tibco:emsadm`) |
+| One sourcetype for everything a multi-component product emits | Loses the ability to apply per-component extractions | Per-component sourcetype (`<vendor>:<component>`, e.g. `broker:server`, `broker:queue`, `broker:admin`) |
 
 ## Documenting the decision in the tracker
 
@@ -256,7 +234,7 @@ In the Data Sources tab, the `Collection Method` column should be precise enough
 Good:
 - `OTel filelog receiver (multiline regex: ^\d{4}-\d{2}-\d{2}; encoding: utf-8)`
 - `OTel oracledbreceiver (read-only role: splunk_ro; port 1541)`
-- `OTel tibcoems receiver (admin URL tcp://emshost:7222; svc acct: splunk_ems_ro)`
+- `OTel <broker> receiver (admin URL tcp://<host>:<port>; svc acct: <read-only account>)`
 - `PowerConnect for SAP (ABAP install on the ECC system, push via HEC)`
 
 Bad (vague):

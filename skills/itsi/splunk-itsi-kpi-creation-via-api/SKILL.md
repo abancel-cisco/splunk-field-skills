@@ -323,8 +323,8 @@ KPI_SPECS = [
 
 # 3. Target services - the leaves to receive the KPI set
 TARGETS = [
-    ("e84db4fd-68d2-42cf-aafe-4c0ec402cf7e", "Buttercup-Queue - Platform"),
-    ("a1eda1a0-9052-4c17-a707-b43560eac11e", "Buttercup-Invoices - Platform"),
+    ("e84db4fd-68d2-42cf-aafe-4c0ec402cf7e", "Middleware-Queue - Platform"),
+    ("a1eda1a0-9052-4c17-a707-b43560eac11e", "Invoicing-App - Platform"),
     # ... 6 more ...
 ]
 
@@ -484,7 +484,7 @@ Same root cause, generalised. If several KPIs read the **same base-search column
 `threshold_field`). ITSI syncs every KPI's statop *from its linked base-search metric*, so if
 two KPIs share one metric they silently collapse to that metric's statop.
 
-Validated (Acme, invoice-processing use case, 2026-07): one per-vendor base search column `inv_count` feeds three KPIs —
+Validated (invoice-processing use case, 2026-07): one per-vendor base search column `inv_count` feeds three KPIs —
 
 ```python
 {"_key":"inv_count",      "threshold_field":"inv_count", "aggregate_statop":"sum"},   # Total Invoices
@@ -578,7 +578,7 @@ gd = {
      {"item": "v_events", "type": "block", "position": {"x": 0, "y": 40, "w": 1150, "h": 430}}]},
   "title": "Item Investigation", "inputs": {}, "description": ""
 }
-policy = {"object_type": "notable_aggregation_policy", "title": "Acme - Parked Invoice Investigation (Lab)",
+policy = {"object_type": "notable_aggregation_policy", "title": "Buttercup - Parked Invoice Investigation (Lab)",
   "disabled": 0, "is_default": 0, "priority": 7, "split_by_field": "entity_title",
   "group_dashboard": json.dumps(gd), "group_dashboard_context": "last",
   "filter_criteria": {"condition": "OR", "items": [{"type": "clause", "config": {"condition": "AND", "items": [
@@ -672,10 +672,10 @@ Or via UI: open the service, open the KPI settings, save (no change needed). ITS
 
 | Anti-pattern | Why it's bad | Fix |
 |---|---|---|
-| One base search per service (e.g., "Buttercup-Bus CPU search", "Buttercup-Orders CPU search") | N×M searches; wastes search head; impossible to fix universally | One base search per data source + entity type. All services share it |
+| One base search per service (e.g., "Middleware-Bus CPU search", "Fulfilment-Orders CPU search") | N×M searches; wastes search head; impossible to fix universally | One base search per data source + entity type. All services share it |
 | Manual UI clicking for 50+ KPIs | 3+ hours; error-prone; not reproducible | Validate one canary in UI, then bulk-replicate via script |
 | Treating REST PATCH as "fire and forget" without GET-after-PATCH | Silent rollbacks go undetected until users complain | Always GET after PATCH on the first few iterations; once you know the payload is clean, can skip |
-| Embedding customer-specific values in the base search (e.g., `index=acme_*`) | Not reusable across customers; needs forking per engagement | Keep base searches generic; use macros for customer-specific filters |
+| Embedding customer-specific values in the base search (e.g., `index=buttercup_*`) | Not reusable across customers; needs forking per engagement | Keep base searches generic; use macros for customer-specific filters |
 | Deploying KPIs with no inline thresholds and no template | Health scores never appear; easy to miss because KPI values look fine | Always include baseline `aggregate_thresholds` + `entity_thresholds` at deploy; tune bands later |
 | Waiting days before any threshold config "to see the data first" | Service Analyzer stays gray for the entire soak period | Baseline normal thresholds are safe; they don't create false criticals. Add warning/critical bands after observing distributions |
 | Creating KPIs with `search_type=adhoc` "to be safe" | Loses shared-base benefits (run-once, share-config); harder to maintain | Default to shared_base; switch to adhoc only when there's a specific reason |

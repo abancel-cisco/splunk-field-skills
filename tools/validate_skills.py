@@ -112,8 +112,7 @@ WORD = re.compile(r"[A-Za-z][A-Za-z0-9.-]{2,}")
 # fails: 'observability.splunkcloud.com' is allowed but
 # 'customerx.observability.splunkcloud.com' is not.
 ALLOWED_TOKENS = re.compile(
-    r"acme[a-z0-9-]*\.(?:observability\.)?splunkcloud\.com"
-    r"|acme-itsi\.splunkcloud\.com"
+    r"buttercup[a-z0-9-]*\.(?:observability\.)?splunkcloud\.com"
     # Product endpoints shared by every tenant, so they identify nobody. The
     # realm is required to look like a realm ('eu1'), which is what stops a
     # customer name being waved through as a subdomain.

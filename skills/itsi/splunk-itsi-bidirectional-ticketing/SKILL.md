@@ -74,12 +74,12 @@ curl --location -X POST 'https://<itsi-sh-host>:8089/servicesNS/nobody/SA-ITOA/s
   --data '{
     "_key": "<itsi_group_id>",
     "event_id": "<itsi_group_id>",
-    "ticket_system": "AcmeITSM",
+    "ticket_system": "ButtercupITSM",
     "tickets": [
       {
         "ticket_id": "ITSM-INC-12345",
         "ticket_url": "http://203.0.113.10:8089/itsm/tickets/12345",
-        "ticket_system": "AcmeITSM"
+        "ticket_system": "ButtercupITSM"
       }
     ],
     "object_type": "notable_event_ticketing"

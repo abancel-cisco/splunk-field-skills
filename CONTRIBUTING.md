@@ -6,8 +6,8 @@ Pull requests are welcome, particularly corrections and version re-validations.
 
 **1. No customer-identifying information.** Ever, anywhere, including in examples,
 sample output, screenshots, URLs, and commit messages. Git history is permanent, and a
-customer name scrubbed in a later commit is still public. Use `acme` / `Acme` as the
-placeholder organisation, `acme-itsi.splunkcloud.com` style hostnames, and the
+customer name scrubbed in a later commit is still public. Use `Buttercup` as the
+placeholder organisation, `buttercup-itsi.splunkcloud.com` style hostnames, and the
 [RFC 5737](https://datatracker.ietf.org/doc/html/rfc5737) documentation ranges
 (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`) for IP addresses. Never a real
 stack hostname, a real username, or a real email address.

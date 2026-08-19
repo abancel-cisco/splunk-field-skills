@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-glass-table-rest
 category: itsi
-description: Create ITSI Glass Tables programmatically via REST API — Service-Health-Score tiles overlaid on a custom backdrop image. Covers the gt_version=beta schema (visualizations / dataSources / layout.structure / inputs / defaults), the form-encoded `data=<JSON>` body convention that ITSI's itoa_interface endpoint requires (raw JSON returns "owner fields corrupted or missing in payload"), the SA-ITOA_files KV store collection used for backdrop images (base64 in `data` field, referenced via `splunk-enterprise-kvstore://<_key>`), the `get_full_itsi_summary_kpi(<kpi_id>)` macro pattern, the SHKPI-<service_id> ID convention for Service Health Score KPIs, and the "background carries the story, tiles carry the data" composition pattern proven on the SAP-GT-Template and reused for Acme. Use when a customer asks for a custom glass table that visualises service interactions / sequential flows / cross-perimeter dependencies, when you need to produce a glass table from a service tree without clicking through the GUI, when batching glass-table creation across an environment, or when you want a backdrop that combines a real customer logo with directional flow arrows.
+description: Create ITSI Glass Tables programmatically via REST API — Service-Health-Score tiles overlaid on a custom backdrop image. Covers the gt_version=beta schema (visualizations / dataSources / layout.structure / inputs / defaults), the form-encoded `data=<JSON>` body convention that ITSI's itoa_interface endpoint requires (raw JSON returns "owner fields corrupted or missing in payload"), the SA-ITOA_files KV store collection used for backdrop images (base64 in `data` field, referenced via `splunk-enterprise-kvstore://<_key>`), the `get_full_itsi_summary_kpi(<kpi_id>)` macro pattern, the SHKPI-<service_id> ID convention for Service Health Score KPIs, and the "background carries the story, tiles carry the data" composition pattern proven on the SAP-GT-Template and reused for Buttercup. Use when a customer asks for a custom glass table that visualises service interactions / sequential flows / cross-perimeter dependencies, when you need to produce a glass table from a service tree without clicking through the GUI, when batching glass-table creation across an environment, or when you want a backdrop that combines a real customer logo with directional flow arrows.
 disable-model-invocation: true
 ---
 
@@ -155,7 +155,7 @@ The default PIL font and many system fonts don't carry the `↔ ↑ ↓ →` gly
 
 ### Gotcha 7: viz / dataSource IDs MUST be `[A-Za-z0-9_]+` only — dashes black-screen the renderer
 
-The React canvas for `gt_version=beta` looks up viz and dataSource references using a strict identifier regex. If a viz ID contains a hyphen, a period, a space, or any other non-alphanumeric (`viz_001_Buttercup-Invoicing_-_Functional`, `viz.health-score`, `ds.Buttercup-ERP-DB`), the renderer **does not throw a visible error** — the whole canvas mounts as a black `<div>` with no tiles, no backdrop, no message. The GT is readable via REST, the JSON is valid, but the page just goes black.
+The React canvas for `gt_version=beta` looks up viz and dataSource references using a strict identifier regex. If a viz ID contains a hyphen, a period, a space, or any other non-alphanumeric (`viz_001_Invoicing_-_Functional`, `viz.health-score`, `ds.ERP-DB`), the renderer **does not throw a visible error** — the whole canvas mounts as a black `<div>` with no tiles, no backdrop, no message. The GT is readable via REST, the JSON is valid, but the page just goes black.
 
 The SAP-GT-Template convention is `viz_[A-Za-z0-9]{10}` and `ds_[A-Za-z0-9]{10}`. Mirror it:
 
@@ -241,7 +241,7 @@ BG_NAME   = 'my-backdrop-v1.png'
 
 # Service -> SHS KPI ID map (use SHKPI-<service_id> convention).
 SHS_MAP = {
-    'Buttercup-Invoicing - Functional': 'SHKPI-ee7a0281-d9c0-4a11-a6fe-e382dc709e4e',
+    'Invoicing - Functional': 'SHKPI-ee7a0281-d9c0-4a11-a6fe-e382dc709e4e',
     # ...
 }
 
@@ -422,7 +422,7 @@ def create_glasstable(definition):
 
 # Example tiles list (use coordinates that align with your backdrop):
 TILES = [
-    ('Buttercup-Invoicing - Functional', 232, 440, 280, 80),
+    ('Invoicing - Functional', 232, 440, 280, 80),
     # ...
 ]
 

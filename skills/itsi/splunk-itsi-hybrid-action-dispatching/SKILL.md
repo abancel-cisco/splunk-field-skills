@@ -39,7 +39,7 @@ no_proxy = localhost, 127.0.0.1, <manager-host-or-domain>
 For example:
 ```ini
 [proxyConfig]
-no_proxy = localhost, 127.0.0.1, acme-itsi.splunkcloud.com
+no_proxy = localhost, 127.0.0.1, buttercup-itsi.splunkcloud.com
 ```
 
 Alternatively, if the Executor node does not need a proxy for external communication, disable proxy routing entirely in `server.conf`. Restart the Splunk instance on the Executor node to apply changes.

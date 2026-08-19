@@ -148,7 +148,7 @@ If your consolidated `base_search` SPL contains *anything* beyond a bare `| msta
 | Ship a... | When | What you select in the wizard |
 |---|---|---|
 | **Live service** | The CP provides ready-to-use monitoring for a specific deployment (e.g. "Database Oracle" with the consolidated base search) | The service. The wizard pulls KPIs + base search automatically |
-| **Service template** | The CP provides a blueprint that customers instantiate themselves (e.g. "Buttercup-Orders-* - Platform" — one per perimeter) | The template. New services created from it inherit the KPI set |
+| **Service template** | The CP provides a blueprint that customers instantiate themselves (e.g. "Fulfilment-Orders-* - Platform" — one per perimeter) | The template. New services created from it inherit the KPI set |
 | **Both** | The CP provides both a starter service AND a template for similar instances | Select both; wizard packages each separately |
 
 For DB monitoring: ship a live service per engine (`Database Oracle`, `Database Postgres`), each pre-wired to its consolidated base search. Customers select the service in the wizard CP install flow and get monitoring immediately. No template needed if there's only one DB instance per engine type per customer.
@@ -336,8 +336,8 @@ UI path: **ITSI → Configuration → Content Library → Create Content Pack** 
 
 | Field | What to enter | Notes |
 |---|---|---|
-| **Content Pack Name** | Human-readable title (e.g. `Acme DB Monitoring`) | Becomes the title in the Content Library |
-| **App ID** | App folder name (e.g. `DA-ITSI-CP-acme-dbm`) | Must start with `DA-ITSI-CP-` by convention. No spaces; kebab-case |
+| **Content Pack Name** | Human-readable title (e.g. `Buttercup DB Monitoring`) | Becomes the title in the Content Library |
+| **App ID** | App folder name (e.g. `DA-ITSI-CP-buttercup-dbm`) | Must start with `DA-ITSI-CP-` by convention. No spaces; kebab-case |
 | **Version** | Semver (e.g. `1.0.0`) | Bump on every export |
 | **Author** | Your name / team | Free text |
 | **Description** | 2-3 sentences: what it provides, prerequisites | Customer-facing |
@@ -494,8 +494,8 @@ Click **Create Content Pack**. The wizard generates a `.tar.gz` file in your bro
 ### What the .tar.gz contains
 
 ```
-DA-ITSI-CP-acme-dbm.tar.gz
-└── DA-ITSI-CP-acme-dbm/
+DA-ITSI-CP-buttercup-dbm.tar.gz
+└── DA-ITSI-CP-buttercup-dbm/
     ├── default/
     │   ├── app.conf
     │   ├── itsi_service.conf            # your services as conf entries
@@ -520,7 +520,7 @@ UI: **Splunk Web → Apps → Manage Apps → Install app from file** → upload
 
 CLI:
 ```bash
-splunk install app /path/to/DA-ITSI-CP-acme-dbm.tar.gz
+splunk install app /path/to/DA-ITSI-CP-buttercup-dbm.tar.gz
 splunk restart  # if prompted
 ```
 
@@ -818,7 +818,7 @@ For those, leave the original base search running, document it as deliberate ("k
 - **1 of 7** kept deliberately (the tablespace one)
 - Each disabled search ran every 15 min → **~24 fewer scheduled search runs per hour** reclaimed for the search head
 - The consolidated base search already existed (running every 5 min, 12/hour) → no net new load added
-- All Buttercup-Fulfilment Oracle KPIs continued to function (verified in UI; REST probes lagged due to search head catch-up)
+- All Fulfilment Oracle KPIs continued to function (verified in UI; REST probes lagged due to search head catch-up)
 - Total session time: ~90 min (50 min of which was diagnosing the four hidden-state fields the first time)
 
 The hidden-state lessons from this session are why this skill exists in its current form. The lessons table above lets the next session do this work in 20-30 min instead of 90.

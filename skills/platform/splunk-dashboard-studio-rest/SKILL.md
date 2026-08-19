@@ -194,8 +194,8 @@ No need to GET the service first — just prepend `SHKPI-` to the service ID. `a
 The `name` you POST becomes the URL slug (`/app/<app>/<name>`) and the filename of the persisted XML. It must be lowercase alphanumeric with underscores — no spaces, no hyphens, no special chars. The user-facing title is the `<label>` inside the XML.
 
 ```python
-NAME  = 'acme_service_flow_map_pov'    # URL slug: /app/itsi/acme_service_flow_map_pov
-LABEL = 'Acme - Service Flow Map' # what users see in the menu
+NAME  = 'buttercup_service_flow_map_pov'    # URL slug: /app/itsi/buttercup_service_flow_map_pov
+LABEL = 'Buttercup - Service Flow Map' # what users see in the menu
 ```
 
 ### Gotcha 10: dashboards are user-owned by default
@@ -231,7 +231,7 @@ DESC  = 'Programmatic v0.1.'
 BG_PNG = './backdrop.png'
 
 SHS_MAP = {
-    'Buttercup-Invoicing - Functional': {
+    'Invoicing - Functional': {
         'service_id':  'ee7a0281-d9c0-4a11-a6fe-e382dc709e4e',
         'shs_kpi_id':  'SHKPI-ee7a0281-d9c0-4a11-a6fe-e382dc709e4e',
     },
@@ -370,7 +370,7 @@ def build_xml(definition):
 # ---- Deploy ----
 
 TILES = [
-    ('Buttercup-Invoicing - Functional', 232, 440, 280, 80),
+    ('Invoicing - Functional', 232, 440, 280, 80),
     # ...
 ]
 
@@ -440,7 +440,7 @@ https://<stack>.splunkcloud.com/en-GB/app/<APP>/<NAME>
 |---|---|---|
 | Lifting a glass-table JSON definition wholesale into Dashboard Studio | `defaults.dataSources.global` is silently ignored; `swap_service_ids` etc are unknown fields | Translate `global` -> `ds.search`; strip glass-table-only top-level fields |
 | Using `splunk-enterprise-kvstore://<key>` for the backdrop | Dashboard Studio doesn't resolve this scheme; image just doesn't appear | Encode as `data:image/png;base64,...` |
-| Hyphens in viz/ds IDs (e.g. `viz_Buttercup-Invoicing-Functional`) | Renderer rejects; tiles don't appear | `[A-Za-z_][A-Za-z0-9_]*` only; use `short_id()` helper |
+| Hyphens in viz/ds IDs (e.g. `viz_Invoicing-Functional`) | Renderer rejects; tiles don't appear | `[A-Za-z_][A-Za-z0-9_]*` only; use `short_id()` helper |
 | Forgetting `version="2"` in the dashboard XML | Splunk parses as legacy SimpleXML; your JSON is silently ignored | Always set `<dashboard version="2" ...>` |
 | Hosting an ITSI-macro dashboard in the `search` app | `get_full_itsi_summary_kpi` doesn't resolve; data sources fail with "macro not found" | Host in `itsi` app, OR qualify as `SA-ITOA:get_full_itsi_summary_kpi(...)` |
 | Using `name='My Cool Dashboard'` | URL slug breaks (spaces, capitals); some browsers refuse the URL | `name` must be lowercase alphanumeric + underscores; put the friendly title in `<label>` |
