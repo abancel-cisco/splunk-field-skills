@@ -1,0 +1,7 @@
+.DS_Store
+*.tar.gz
+__pycache__/
+*.pyc
+.venv/
+_backups/
+tools/deny-digests.txt

@@ -1,0 +1,28 @@
+{
+  "name": "splunk-field-skills",
+  "description": "Agent skills for Splunk ITSI, the Splunk platform, and Splunk Observability Cloud. Not an official Splunk project.",
+  "skills": [
+    "./skills/_meta/external-knowledge-sources",
+    "./skills/itsi/splunk-itsi-50-release-overview",
+    "./skills/itsi/splunk-itsi-50-upgrade",
+    "./skills/itsi/splunk-itsi-api-access",
+    "./skills/itsi/splunk-itsi-bidirectional-ticketing",
+    "./skills/itsi/splunk-itsi-common-errors",
+    "./skills/itsi/splunk-itsi-content-pack-creation",
+    "./skills/itsi/splunk-itsi-content-pack-editing",
+    "./skills/itsi/splunk-itsi-entity-binding-architecture",
+    "./skills/itsi/splunk-itsi-entity-cmdb-lookup",
+    "./skills/itsi/splunk-itsi-entity-health-dashboard-embed",
+    "./skills/itsi/splunk-itsi-entity-health-dashboards",
+    "./skills/itsi/splunk-itsi-flow-monitoring",
+    "./skills/itsi/splunk-itsi-glass-table-rest",
+    "./skills/itsi/splunk-itsi-hybrid-action-dispatching",
+    "./skills/itsi/splunk-itsi-kpi-creation-via-api",
+    "./skills/itsi/splunk-itsi-performance-tuning",
+    "./skills/itsi/splunk-itsi-safety-guidelines",
+    "./skills/itsi/splunk-itsi-service-tree-design",
+    "./skills/itsi/splunk-itsi-static-data-replay",
+    "./skills/observability/otel-vs-splunk-ingestion",
+    "./skills/platform/splunk-dashboard-studio-rest"
+  ]
+}
