@@ -148,7 +148,7 @@ If your consolidated `base_search` SPL contains *anything* beyond a bare `| msta
 | Ship a... | When | What you select in the wizard |
 |---|---|---|
 | **Live service** | The CP provides ready-to-use monitoring for a specific deployment (e.g. "Database Oracle" with the consolidated base search) | The service. The wizard pulls KPIs + base search automatically |
-| **Service template** | The CP provides a blueprint that customers instantiate themselves (e.g. "MES-* - Platform" — one per perimeter) | The template. New services created from it inherit the KPI set |
+| **Service template** | The CP provides a blueprint that customers instantiate themselves (e.g. "Buttercup-Orders-* - Platform" — one per perimeter) | The template. New services created from it inherit the KPI set |
 | **Both** | The CP provides both a starter service AND a template for similar instances | Select both; wizard packages each separately |
 
 For DB monitoring: ship a live service per engine (`Database Oracle`, `Database Postgres`), each pre-wired to its consolidated base search. Customers select the service in the wizard CP install flow and get monitoring immediately. No template needed if there's only one DB instance per engine type per customer.
@@ -729,7 +729,7 @@ def deep_replace(obj, m):
     if isinstance(obj, str) and obj in m: return m[obj]
     return obj
 
-for svc in [MES_SVC, TIBCO_SVC]:
+for svc in [ORDERS_SVC, MIDDLEWARE_SVC]:
     for k in svc.get('kpis') or []:
         if k.get('base_search_id') != NEW_BS_KEY: continue  # only the repointed ones
 
@@ -818,7 +818,7 @@ For those, leave the original base search running, document it as deliberate ("k
 - **1 of 7** kept deliberately (the tablespace one)
 - Each disabled search ran every 15 min → **~24 fewer scheduled search runs per hour** reclaimed for the search head
 - The consolidated base search already existed (running every 5 min, 12/hour) → no net new load added
-- All MES Oracle KPIs continued to function (verified in UI; REST probes lagged due to search head catch-up)
+- All Buttercup-Fulfilment Oracle KPIs continued to function (verified in UI; REST probes lagged due to search head catch-up)
 - Total session time: ~90 min (50 min of which was diagnosing the four hidden-state fields the first time)
 
 The hidden-state lessons from this session are why this skill exists in its current form. The lessons table above lets the next session do this work in 20-30 min instead of 90.

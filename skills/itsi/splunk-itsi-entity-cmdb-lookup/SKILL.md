@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-entity-cmdb-lookup
 category: itsi
-description: Build and maintain a small CSV-based mini-CMDB lookup in Splunk ITSI to enrich entities with business context (perimeter, application, service, ownership) that machine data alone cannot provide. Drives dynamic entity filtering for infrastructure KPIs across multiple perimeters, identifies unmapped/unknown hosts via a scheduled mismatch-audit saved search, and stays editable by a human via the Lookup Editor add-on. Covers the Splunk-Cloud-safe creation pattern (`outputlookup createinapp=true` from a search instead of REST file upload), the multi-row-per-host pattern for hosts that belong to multiple services (e.g. one TIBCO box hosting both BW and EMS), the requirement to expose an alias-type identifier (e.g. ITSIUniqueId) on each entity to make service entity filtering work, the entity-type-name matching gotcha (must equal ITSI's stored entity types verbatim — typically `OS Hosts` or `Azure VM`), the case-insensitive matching gotcha, two consumption patterns (direct `lookup` in KPI search vs ITSI Entity Import for service entity rules), and the host-join-key pitfalls (FQDN drift, hash-suffixed entity titles, case mismatches, SignalFx-style dimensions vs `host`). Use when designing the "glue" between machine data and business perimeters in ITSI, when the user mentions entity tagging / perimeter filtering / entity rules / dynamic KPI scope / mini-CMDB / lookup-based enrichment / service column / multi-membership, when an entity import or info field approach is being considered, or when KPI searches need to be scoped to a subset of hosts that share a business attribute not present in the data stream.
+description: Build and maintain a small CSV-based mini-CMDB lookup in Splunk ITSI to enrich entities with business context (perimeter, application, service, ownership) that machine data alone cannot provide. Drives dynamic entity filtering for infrastructure KPIs across multiple perimeters, identifies unmapped/unknown hosts via a scheduled mismatch-audit saved search, and stays editable by a human via the Lookup Editor add-on. Covers the Splunk-Cloud-safe creation pattern (`outputlookup createinapp=true` from a search instead of REST file upload), the multi-row-per-host pattern for hosts that belong to multiple services (e.g. one Buttercup-Middleware box hosting both a bus and a queue engine), the requirement to expose an alias-type identifier (e.g. ITSIUniqueId) on each entity to make service entity filtering work, the entity-type-name matching gotcha (must equal ITSI's stored entity types verbatim — typically `OS Hosts` or `Azure VM`), the case-insensitive matching gotcha, two consumption patterns (direct `lookup` in KPI search vs ITSI Entity Import for service entity rules), and the host-join-key pitfalls (FQDN drift, hash-suffixed entity titles, case mismatches, SignalFx-style dimensions vs `host`). Use when designing the "glue" between machine data and business perimeters in ITSI, when the user mentions entity tagging / perimeter filtering / entity rules / dynamic KPI scope / mini-CMDB / lookup-based enrichment / service column / multi-membership, when an entity import or info field approach is being considered, or when KPI searches need to be scoped to a subset of hosts that share a business attribute not present in the data stream.
 disable-model-invocation: true
 ---
 
@@ -42,7 +42,7 @@ Prerequisite: REST access to the ITSI SH (see `splunk-itsi-api-access`).
                                                               ┌───────────┴────────────┐
                                                               ▼                        ▼
                                                        Scheduled Audit          KPI scoping
-                                                       Search detects:          |where perimeter="TIBCO"
+                                                       Search detects:          |where perimeter="Buttercup-Middleware"
                                                        - ITSI_NOT_IN_CMDB
                                                        - CMDB_ORPHAN_NOT_IN_ITSI
                                                        - PERIMETER_UNKNOWN
@@ -56,9 +56,9 @@ Resist the urge to over-engineer this on day 1. Six columns is the proven sweet 
 |---|---|---|
 | `host` | Yes | Join key against the data side. **Use the exact form ITSI sees** (see "join key pitfalls" below). |
 | `entity_type` | Yes | **MUST match an ITSI entity type verbatim.** Sanity check with `\| inputlookup itsi_entities \| stats count by entity_type`. Typical Splunk-shipped values: `OS Hosts`, `Azure VM`, `Kubernetes Node`. Do NOT use free text like `Server` — ITSI rule-matching is **literal** on this field |
-| `perimeter` | Yes | Drives KPI/service entity rules at the perimeter rollup level. Reserved values: `UNKNOWN` (yet-to-classify), `OUT_OF_SCOPE` (not in scope), `SHARED` (multi-perimeter). Otherwise: free text matching your service tree (e.g., `TIBCO`, `MES`, `I2P`, `SAP`) |
-| `application` | Yes (recommended) | Refines beyond perimeter. A TIBCO host can be `BusinessWorks` or `EMS`; a SAP host can be `SAP App`, `SAP DB`, `SAP SCS`, etc. |
-| `service` | Yes | **The exact title of the ITSI Platform leaf** the host should bind to (e.g., `TIBCO-BW - Platform`). Drives the Layer-2 entity rule directly. Multi-membership is achieved by adding multiple rows (see "co-located services" below) |
+| `perimeter` | Yes | Drives KPI/service entity rules at the perimeter rollup level. Reserved values: `UNKNOWN` (yet-to-classify), `OUT_OF_SCOPE` (not in scope), `SHARED` (multi-perimeter). Otherwise: free text matching your service tree (e.g., `Buttercup-Middleware`, `Buttercup-Fulfilment`, `Buttercup-Invoicing`, `Buttercup-ERP`) |
+| `application` | Yes (recommended) | Refines beyond perimeter. A Buttercup-Middleware host can be `IntegrationBus` or `MessageQueue`; a Buttercup-ERP host can be `Buttercup-ERP-App`, `Buttercup-ERP-DB`, `Buttercup-ERP-Central`, etc. |
+| `service` | Yes | **The exact title of the ITSI Platform leaf** the host should bind to (e.g., `Buttercup-Bus - Platform`). Drives the Layer-2 entity rule directly. Multi-membership is achieved by adding multiple rows (see "co-located services" below) |
 | `notes` | No | Free text for the human maintainer. Not consumed by SPL |
 
 What to defer until you need it: `environment`, `owner`, `tier`, `site`, `region`. Add only when the first concrete query asks for them.
@@ -66,8 +66,8 @@ What to defer until you need it: `environment`, `owner`, `tier`, `site`, `region
 ### Why a `service` column instead of inferring from perimeter+application
 
 Because the inference logic gets non-trivial fast:
-- One TIBCO host runs both BW and EMS engines (two rows, two services)
-- "SAP DB" actually maps to multiple Platform leaves (one per SID)
+- One Buttercup-Middleware host runs both a bus and a queue engine (two rows, two services)
+- "Buttercup-ERP-DB" actually maps to multiple Platform leaves (one per SID)
 - The relationship "perimeter + application → service" is many-to-many in real environments
 
 A `service` column makes the mapping explicit, human-auditable, and trivially consumed by the Entity Import (no SPL gymnastics to compute the target service name).
@@ -78,15 +78,15 @@ When a single physical host belongs to multiple ITSI services, add multiple rows
 
 ```csv
 host,entity_type,perimeter,application,service,notes
-tibhost01.example.com,OS Hosts,TIBCO,BusinessWorks,TIBCO-BW - Platform,
-tibhost01.example.com,OS Hosts,TIBCO,EMS,TIBCO-EMS - Platform,Co-located on same VM
-tibhost02.example.com,OS Hosts,TIBCO,BusinessWorks,TIBCO-BW - Platform,
-tibhost02.example.com,OS Hosts,TIBCO,EMS,TIBCO-EMS - Platform,Co-located on same VM
+mwhost01.example.com,OS Hosts,Buttercup-Middleware,IntegrationBus,Buttercup-Bus - Platform,
+mwhost01.example.com,OS Hosts,Buttercup-Middleware,MessageQueue,Buttercup-Queue - Platform,Co-located on same VM
+mwhost02.example.com,OS Hosts,Buttercup-Middleware,IntegrationBus,Buttercup-Bus - Platform,
+mwhost02.example.com,OS Hosts,Buttercup-Middleware,MessageQueue,Buttercup-Queue - Platform,Co-located on same VM
 ```
 
-The Entity Import step (Pattern B below) handles multi-row → multi-value info fields natively. ITSI stores `service` as a multi-valued info field. Rule matching on `info.service matches "tibco-bw - platform"` matches as long as ONE of the multi-values matches — so the host shows up under BOTH services. Same for `perimeter` and `application` if a host genuinely spans them.
+The Entity Import step (Pattern B below) handles multi-row → multi-value info fields natively. ITSI stores `service` as a multi-valued info field. Rule matching on `info.service matches "buttercup-bus - platform"` matches as long as ONE of the multi-values matches — so the host shows up under BOTH services. Same for `perimeter` and `application` if a host genuinely spans them.
 
-Do NOT try to encode multi-membership with delimited strings (`service="TIBCO-BW - Platform|TIBCO-EMS - Platform"`). ITSI rule matching is per-value, not substring; the delimited form never matches.
+Do NOT try to encode multi-membership with delimited strings (`service="Buttercup-Bus - Platform|Buttercup-Queue - Platform"`). ITSI rule matching is per-value, not substring; the delimited form never matches.
 
 ## Step 1 — Seed the CMDB from ITSI itself
 
@@ -135,14 +135,14 @@ Classification by naming pattern is a one-time heuristic. For Acme-shaped enviro
 
 | Pattern | Likely perimeter | Likely application |
 |---|---|---|
-| `azsap*`, `desap*`, `azeunodfesap*` | SAP | `SAP App` / `SAP DB` / `SAP SCS` / `SAP Backup` (substring match) |
-| `iltib*` (with `glb`) | TIBCO | `BusinessWorks` / `EMS` (refine manually) |
-| `ilmesdev*` | MES | `MES App` / `MES Background` / `Citrix` (substring match) |
-| `ilinvoice*` | I2P | `I2P App` |
-| `ilredpd*` | I2P | `ReadSoft` |
+| `azerp*`, `deerp*`, `azeuerp*` | Buttercup-ERP | `Buttercup-ERP-App` / `Buttercup-ERP-DB` / `Buttercup-ERP-Central` / `Buttercup-ERP-Backup` (substring match) |
+| `ilmw*` (with `glb`) | Buttercup-Middleware | `IntegrationBus` / `MessageQueue` (refine manually) |
+| `ilful*` | Buttercup-Fulfilment | `Buttercup-Orders` / `Buttercup-Batch` / `Buttercup-Desktop` (substring match) |
+| `ilinv*` | Buttercup-Invoicing | `Buttercup-Invoices` |
+| `ildoc*` | Buttercup-Invoicing | `DocCapture` |
 | `ilsqlcons*`, `ilconsdb*` | SHARED | `SQL Server` |
 | `desktop-*` | OUT_OF_SCOPE | — |
-| Short IDs (≤4 chars: `ed3`, `ld1`) | SAP | SAP System ID (PowerConnect logical entities) |
+| Short IDs (≤4 chars: `pr1`, `dv1`) | Buttercup-ERP | ERP system ID (PowerConnect logical entities) |
 | Everything else | UNKNOWN | UNKNOWN |
 
 ## Step 2 — Create the CSV file (Splunk Cloud safe)
@@ -154,7 +154,7 @@ Encode the CSV rows into a single string (use `|` as row separator since values 
 ```spl
 | makeresults
 | fields - _time
-| eval rows=split("host,entity_type,perimeter,application,notes|azsapapp01ad3,Azure VM,SAP,SAP App,...|...", "|")
+| eval rows=split("host,entity_type,perimeter,application,notes|azerpapp01pr1,Azure VM,Buttercup-ERP,Buttercup-ERP-App,...|...", "|")
 | mvexpand rows
 | rex field=rows "(?<host>[^,]*),(?<entity_type>[^,]*),(?<perimeter>[^,]*),(?<application>[^,]*),(?<notes>.*)"
 | fields host, entity_type, perimeter, application, notes
@@ -177,7 +177,7 @@ curl -sS -X POST -H "Authorization: Bearer $TOKEN" \
   --data-urlencode "case_sensitive_match=false"
 ```
 
-**Critical**: set `case_sensitive_match=false` at create time. Hostname casing drifts wildly between data sources (`SAPHOST01.Example.Com` from one collector, `saphost01.example.com` from another). Without case-insensitive matching, half your joins will silently fail.
+**Critical**: set `case_sensitive_match=false` at create time. Hostname casing drifts wildly between data sources (`ERPHOST01.Example.Com` from one collector, `erphost01.example.com` from another). Without case-insensitive matching, half your joins will silently fail.
 
 **Don't omit the `type` argument.** Some Splunk docs show `type=file_based` — that argument isn't supported by this endpoint and the create will 400.
 
@@ -262,7 +262,7 @@ Two consumption patterns. Pick based on whether you want the enrichment in the K
     WHERE index=sim_metrics AND metric_name=memory.utilization earliest=-15m
     BY extracted_host
 | lookup entity_cmdb host AS extracted_host OUTPUT perimeter, application
-| where perimeter="TIBCO" AND application="BusinessWorks"
+| where perimeter="Buttercup-Middleware" AND application="IntegrationBus"
 | timechart avg(mem_pct) BY extracted_host
 ```
 
@@ -298,9 +298,9 @@ Then in the ITSI Entity Import UI, map:
 
 Set the import to **Append/Merge** (not Replace) so the SIM-created entities keep their existing identifiers and gain the new info fields. Schedule for hourly.
 
-The `stats values(*) as * by entity_title, entity_type` pre-aggregation step is what handles the multi-row co-location pattern: if a host has 2 CMDB rows (BW and EMS), the resulting entity has multi-valued `service` info field with both leaf names. ITSI rule matching on either leaf's rule will match this entity.
+The `stats values(*) as * by entity_title, entity_type` pre-aggregation step is what handles the multi-row co-location pattern: if a host has 2 CMDB rows (one bus, one queue), the resulting entity has multi-valued `service` info field with both leaf names. ITSI rule matching on either leaf's rule will match this entity.
 
-After the first run, your KPI entity rules in the service tree can match on `info.service == "tibco-bw - platform"` natively (note: ITSI lowercases info values on import — match on lowercase).
+After the first run, your KPI entity rules in the service tree can match on `info.service == "buttercup-bus - platform"` natively (note: ITSI lowercases info values on import — match on lowercase).
 
 **Pros**: clean UX in service rules, info fields visible in entity detail page, multi-membership works natively.  
 **Cons**: requires UI configuration, hourly lag from CSV edit to entity update.

@@ -323,8 +323,8 @@ KPI_SPECS = [
 
 # 3. Target services - the leaves to receive the KPI set
 TARGETS = [
-    ("e84db4fd-68d2-42cf-aafe-4c0ec402cf7e", "TIBCO-EMS - Platform"),
-    ("a1eda1a0-9052-4c17-a707-b43560eac11e", "I2P-App - Platform"),
+    ("e84db4fd-68d2-42cf-aafe-4c0ec402cf7e", "Buttercup-Queue - Platform"),
+    ("a1eda1a0-9052-4c17-a707-b43560eac11e", "Buttercup-Invoices - Platform"),
     # ... 6 more ...
 ]
 
@@ -432,7 +432,7 @@ tile *and* every split-by / entity-breakdown row. There is **no per-level unit o
 This is a hard ITSI limitation, not a payload trick you can work around.
 
 The trap: overloading one KPI so the aggregate and the entity level measure *different things*.
-Classic example (a parked-invoice KPI split by `INVOICE_GUID`):
+Classic example (a parked-invoice KPI split by `DOC_GUID`):
 - aggregate wanted = **count** of parked invoices (`aggregate_statop=count`)
 - per-entity wanted = **minutes** each invoice has been parked (`entity_statop=max` on a `stuck_min` field)
 
@@ -464,11 +464,11 @@ Two KPIs, each internally unit-consistent:
 | KPI | base_search_metric | is_entity_breakdown | aggregate_statop | unit | tile shows | breakdown shows |
 |---|---|---|---|---|---|---|
 | Parked Invoices | `parked_count` | **False** | count | `count` | `939 count` | (none) |
-| Parked Invoice Age (min) | `stuck_min` | **True** (`INVOICE_GUID`) | avg | `min` | `740 min` | per-invoice `15.5 … 1437.7 min` |
+| Parked Invoice Age (min) | `stuck_min` | **True** (`DOC_GUID`) | avg | `min` | `740 min` | per-invoice `15.5 … 1437.7 min` |
 
 Notes:
 - The count KPI keeps `is_entity_breakdown=False` even though the base search is entity-broken-down;
-  it rolls the per-`INVOICE_GUID` rows up to a single count. Breakdown OFF also means it produces
+  it rolls the per-`DOC_GUID` rows up to a single count. Breakdown OFF also means it produces
   **no per-entity severities**, so it can never trip the entity-degraded correlation search.
 - The age KPI's aggregate is `avg(stuck_min)` = minutes, so tile and rows are both minutes → one
   unit (`min`) is correct at both levels.
@@ -484,7 +484,7 @@ Same root cause, generalised. If several KPIs read the **same base-search column
 `threshold_field`). ITSI syncs every KPI's statop *from its linked base-search metric*, so if
 two KPIs share one metric they silently collapse to that metric's statop.
 
-Validated (Acme Cockpit, 2026-07): one per-vendor base search column `inv_count` feeds three KPIs —
+Validated (Acme, invoice-processing use case, 2026-07): one per-vendor base search column `inv_count` feeds three KPIs —
 
 ```python
 {"_key":"inv_count",      "threshold_field":"inv_count", "aggregate_statop":"sum"},   # Total Invoices
@@ -517,7 +517,7 @@ trusting a manual dispatch. (Creating new KPIs on the base search does not have 
 ## Pseudo-entity investigation: episode dashboard via a custom NEAP (not Service Analyzer)
 
 **Validated pattern (ITSI 4.21.2, 2026-07).** When a KPI is broken down by a
-split-by field (pseudo-entities — e.g. `INVOICE_GUID`, `VENDOR_NO`) rather than real
+split-by field (pseudo-entities — e.g. `DOC_GUID`, `VENDOR_NO`) rather than real
 entity-store objects, you get per-value severities in `itsi_summary` for free, and the
 built-in `Service Monitoring - Entity Degraded` correlation search raises a notable per
 degraded pseudo-entity (with `entity_title` = the split value). But you hit a wall when a
@@ -571,7 +571,7 @@ gd = {
                   "newTab": True}}]},
   },
   "dataSources": {"ds_ev": {"type": "ds.search", "options": {
-      "query": '(index=readsoft sim=true "$entity_title$") OR (index=sap sim=true INVOICE_GUID="$entity_title$") | table _time index sourcetype _raw | sort _time',
+      "query": '(index=doccapture sim=true "$entity_title$") OR (index=erp sim=true DOC_GUID="$entity_title$") | table _time index sourcetype _raw | sort _time',
       "queryParameters": {"earliest": "-3d", "latest": "now"}}}},
   "layout": {"type": "grid", "options": {}, "structure": [
      {"item": "v_open",   "type": "block", "position": {"x": 0, "y": 0,  "w": 1150, "h": 40}},
@@ -672,7 +672,7 @@ Or via UI: open the service, open the KPI settings, save (no change needed). ITS
 
 | Anti-pattern | Why it's bad | Fix |
 |---|---|---|
-| One base search per service (e.g., "TIBCO-BW CPU search", "MES-App CPU search") | N×M searches; wastes search head; impossible to fix universally | One base search per data source + entity type. All services share it |
+| One base search per service (e.g., "Buttercup-Bus CPU search", "Buttercup-Orders CPU search") | N×M searches; wastes search head; impossible to fix universally | One base search per data source + entity type. All services share it |
 | Manual UI clicking for 50+ KPIs | 3+ hours; error-prone; not reproducible | Validate one canary in UI, then bulk-replicate via script |
 | Treating REST PATCH as "fire and forget" without GET-after-PATCH | Silent rollbacks go undetected until users complain | Always GET after PATCH on the first few iterations; once you know the payload is clean, can skip |
 | Embedding customer-specific values in the base search (e.g., `index=acme_*`) | Not reusable across customers; needs forking per engagement | Keep base searches generic; use macros for customer-specific filters |

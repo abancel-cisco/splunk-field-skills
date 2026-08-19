@@ -13,7 +13,7 @@ How to design a service tree for a multi-perimeter solution and build it safely 
 
 ## When to use this skill
 
-- Designing the "service glue" for a solution that spans multiple systems (TIBCO, SAP, MES, etc.)
+- Designing the "service glue" for a solution that spans multiple systems (Buttercup-Middleware, Buttercup-ERP, Buttercup-Fulfilment, etc.)
 - Joining an ITSI environment where another owner already has services and you must not touch theirs
 - Bootstrapping a tree from REST API rather than the UI (faster, repeatable, version-controllable)
 - Recovering from a half-built tree (orphan services, broken deps, prefix sprawl)
@@ -30,21 +30,21 @@ The layer count stays at three (parent → perimeter → leaf). Inside each peri
 | Layer | Purpose | Examples | Has KPIs? |
 |---|---|---|---|
 | **Top parent** (1) | The programme | `Acme Observability` | No (rollup only) |
-| **Perimeter rollups** (4-6) | One per business/system perimeter | `TIBCO`, `MES`, `I2P`, `SAP`, `End-to-End Business Transactions` | Rollup only (no direct KPIs) |
+| **Perimeter rollups** (4-6) | One per business/system perimeter | `Buttercup-Middleware`, `Buttercup-Fulfilment`, `Buttercup-Invoicing`, `Buttercup-ERP`, `End-to-End Business Transactions` | Rollup only (no direct KPIs) |
 | **Leaf services** (organized in 3 pillars per perimeter) | See pillar pattern below | YES — actual KPIs land here |
 
 #### The three-pillar pattern (per perimeter)
 
 ```
-TIBCO  (perimeter rollup)
- ├── Platform                                  (infra metrics from OS/VM data)
- │    ├── TIBCO-BW   - Platform                ← 6 OS KPIs (CPU, Mem, Disk R/W, Net R/T)
- │    └── TIBCO-EMS  - Platform                ← 6 OS KPIs
- ├── Functional                                (app-specific KPIs from app logs/traces)
- │    ├── TIBCO-BW   - BusinessWorks Engines   ← e.g., process count, queue depth, errors/s
- │    └── TIBCO-EMS  - JMS Queues              ← e.g., pending message count, throughput
- └── App Health      (optional)                (combined health view, or alerting wrapper)
-      └── TIBCO - Overall App Health           ← rolls up Platform + Functional severities
+Buttercup-Middleware  (perimeter rollup)
+ ├── Platform                                        (infra metrics from OS/VM data)
+ │    ├── Buttercup-Bus   - Platform                 ← 6 OS KPIs (CPU, Mem, Disk R/W, Net R/T)
+ │    └── Buttercup-Queue - Platform                 ← 6 OS KPIs
+ ├── Functional                                      (app-specific KPIs from app logs/traces)
+ │    ├── Buttercup-Bus   - Integration Engines      ← e.g., process count, queue depth, errors/s
+ │    └── Buttercup-Queue - JMS Queues               ← e.g., pending message count, throughput
+ └── App Health      (optional)                      (combined health view, or alerting wrapper)
+      └── Buttercup-Middleware - Overall App Health  ← rolls up Platform + Functional severities
 ```
 
 Why three pillars (Platform / Functional / App Health):
@@ -57,17 +57,17 @@ Why three pillars (Platform / Functional / App Health):
 
 This separation is what lets you say "the Platform is fine but the Functional has alarms" — a sentence operations teams actually need to say.
 
-Resist the temptation to go 4 levels deep on day 1 (e.g., adding a "MES → MES-App → MES-App - Platform → MES-App - Platform - Linux Hosts"). You can always insert intermediate layers later; you cannot easily collapse them. The Service Topology view also gets unreadable past 3 layers wide for a single perimeter.
+Resist the temptation to go 4 levels deep on day 1 (e.g., adding a "Buttercup-Fulfilment → Buttercup-Orders → Buttercup-Orders - Platform → Buttercup-Orders - Platform - Linux Hosts"). You can always insert intermediate layers later; you cannot easily collapse them. The Service Topology view also gets unreadable past 3 layers wide for a single perimeter.
 
 ### 1b. The "End-to-End Business Transactions" perimeter
 
-A 5th-or-6th sibling perimeter (peer of TIBCO/MES/SAP/etc.) dedicated to cross-perimeter user journeys:
+A 5th-or-6th sibling perimeter (peer of Buttercup-Middleware/Buttercup-Fulfilment/Buttercup-ERP/etc.) dedicated to cross-perimeter user journeys:
 
 ```
 End-to-End Business Transactions  (perimeter rollup)
- ├── Order-to-Cash                  ← spans SAP → TIBCO → MES → I2P
- ├── Procure-to-Pay                 ← spans I2P → SAP → MES
- ├── Invoice Processing             ← spans MES Capture → SAP App → SAP DB
+ ├── Order-to-Cash                  ← spans Buttercup-ERP → Buttercup-Middleware → Buttercup-Fulfilment → Buttercup-Invoicing
+ ├── Procure-to-Pay                 ← spans Buttercup-Invoicing → Buttercup-ERP → Buttercup-Fulfilment
+ ├── Invoice Processing             ← spans Buttercup-DocCapture → Buttercup-ERP-App → Buttercup-ERP-DB
  └── ...
 ```
 
@@ -85,19 +85,19 @@ Pick a convention before you create anything and stick to it. The one we settled
 
 ```
 <PERIMETER>[-<SUBSYSTEM>] - <PILLAR>
-  TIBCO                                  ← perimeter rollup, no pillar suffix
-  TIBCO-BW - Platform                    ← leaf, "Platform" pillar
-  TIBCO-BW - BusinessWorks Engines       ← leaf, "Functional" pillar (no suffix, but a descriptive title)
-  TIBCO-EMS - Platform
-  TIBCO-EMS - JMS Queues                 ← Functional leaf
-  MES-App - Platform
-  MES-Background - Platform
-  MES-Citrix - Platform
-  I2P-App - Platform
-  ReadSoft-App - Platform
-  SAP App - Platform                     ← (owned by another consultant in Acme case)
-  End-to-End Business Transactions       ← top-level perimeter for E2E
-  Order-to-Cash                          ← E2E leaf
+  Buttercup-Middleware                     ← perimeter rollup, no pillar suffix
+  Buttercup-Bus - Platform                 ← leaf, "Platform" pillar
+  Buttercup-Bus - Integration Engines      ← leaf, "Functional" pillar (no suffix, but a descriptive title)
+  Buttercup-Queue - Platform
+  Buttercup-Queue - JMS Queues             ← Functional leaf
+  Buttercup-Orders - Platform
+  Buttercup-Batch - Platform
+  Buttercup-Desktop - Platform
+  Buttercup-Invoices - Platform
+  Buttercup-DocCapture - Platform
+  Buttercup-ERP-App - Platform             ← (owned by another consultant in the example)
+  End-to-End Business Transactions         ← top-level perimeter for E2E
+  Order-to-Cash                            ← E2E leaf
 ```
 
 Why this works:
@@ -112,16 +112,16 @@ What to avoid: `ITSI-`, `SVC-`, `Acme-` prefixes — they add no information and
 
 | Pillar | Suffix convention | Example |
 |---|---|---|
-| Platform | `- Platform` (always exactly this) | `MES-App - Platform` |
-| Functional | descriptive title, no canonical suffix | `MES-App - JBoss Processes`, `MES-App - JVM Metrics` |
-| App Health (optional rollup) | `- App Health` | `MES - App Health` |
+| Platform | `- Platform` (always exactly this) | `Buttercup-Orders - Platform` |
+| Functional | descriptive title, no canonical suffix | `Buttercup-Orders - JBoss Processes`, `Buttercup-Orders - JVM Metrics` |
+| App Health (optional rollup) | `- App Health` | `Buttercup-Fulfilment - App Health` |
 | E2E | descriptive business-transaction name | `Order-to-Cash`, `Invoice Processing` |
 
 The Platform suffix is rigid because it drives the bulk Layer-2 entity rule (`info.service matches "<lowercased title>"`) and the bulk replication script in `splunk-itsi-kpi-creation-via-api`. Inconsistent suffixes break the automation.
 
 ### 3. Cross-team integration: read-only refs, never overwrite
 
-The single most important rule when joining an environment that already has services from another owner (e.g., Isolde's SAP services):
+The single most important rule when joining an environment that already has services from another owner (e.g., another consultant's ERP services):
 
 > **Your tree depends on their services. Their tree never depends on yours.**
 
@@ -174,24 +174,24 @@ For a tree like:
 
 ```
 Acme (top parent)
- ├── TIBCO
- │    ├── TIBCO - BusinessWorks
- │    └── TIBCO - EMS
- ├── MES
- │    └── MES - JBoss
+ ├── Buttercup-Middleware
+ │    ├── Buttercup-Middleware - Integration Bus
+ │    └── Buttercup-Middleware - Message Queue
+ ├── Buttercup-Fulfilment
+ │    └── Buttercup-Fulfilment - JBoss
  └── ...
 ```
 
 Create order is leaves → rollups → parent:
 
 ```
-1. TIBCO - BusinessWorks  (no deps)         -> capture _key_bw
-2. TIBCO - EMS            (no deps)         -> capture _key_ems
-3. TIBCO                  (deps: bw, ems)
-4. MES - JBoss            (no deps)         -> capture _key_jb
-5. MES                    (deps: jb)
+1. Buttercup-Middleware - Integration Bus  (no deps)   -> capture _key_bus
+2. Buttercup-Middleware - Message Queue    (no deps)   -> capture _key_queue
+3. Buttercup-Middleware                    (deps: bus, queue)
+4. Buttercup-Fulfilment - JBoss            (no deps)   -> capture _key_jb
+5. Buttercup-Fulfilment                    (deps: jb)
 6. ... (other perimeters same way)
-7. Acme                  (deps: TIBCO, MES, ...)
+7. Acme                                    (deps: Buttercup-Middleware, Buttercup-Fulfilment, ...)
 ```
 
 This avoids the second-pass-to-wire pattern (which works but doubles your API calls and the failure surface).
@@ -202,8 +202,8 @@ This avoids the second-pass-to-wire pattern (which works but doubles your API ca
 
 ```json
 {
-  "title": "TIBCO - BusinessWorks",
-  "description": "TIBCO BusinessWorks engine health and throughput.",
+  "title": "Buttercup-Middleware - Integration Bus",
+  "description": "Integration bus engine health and throughput.",
   "enabled": 1,
   "sec_grp": "default_itsi_security_group"
 }
@@ -222,18 +222,18 @@ POST to `/servicesNS/nobody/SA-ITOA/itoa_interface/service`. Response body is th
 
 ```json
 {
-  "title": "TIBCO",
-  "description": "TIBCO middleware perimeter rollup.",
+  "title": "Buttercup-Middleware",
+  "description": "Middleware perimeter rollup.",
   "enabled": 1,
   "sec_grp": "default_itsi_security_group",
   "services_depends_on": [
     {
-      "serviceid": "<_key of TIBCO - BusinessWorks>",
-      "kpis_depending_on": ["SHKPI-<_key of TIBCO - BusinessWorks>"]
+      "serviceid": "<_key of Buttercup-Middleware - Integration Bus>",
+      "kpis_depending_on": ["SHKPI-<_key of Buttercup-Middleware - Integration Bus>"]
     },
     {
-      "serviceid": "<_key of TIBCO - EMS>",
-      "kpis_depending_on": ["SHKPI-<_key of TIBCO - EMS>"]
+      "serviceid": "<_key of Buttercup-Middleware - Message Queue>",
+      "kpis_depending_on": ["SHKPI-<_key of Buttercup-Middleware - Message Queue>"]
     }
   ]
 }
@@ -253,13 +253,13 @@ You don't create it explicitly. It just exists. So if you have a service with `_
 
 ### Partial update (rename without losing other fields)
 
-The cutover from `SANDBOX-CURSOR-TIBCO` to `TIBCO` is a single field change. The full-object POST works but is risky — you have to re-send every field exactly or you'll wipe one out. Use partial update instead:
+The cutover from `SANDBOX-Buttercup-Middleware` to `Buttercup-Middleware` is a single field change. The full-object POST works but is risky — you have to re-send every field exactly or you'll wipe one out. Use partial update instead:
 
 ```bash
 curl -sS -X POST \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"TIBCO"}' \
+  -d '{"title":"Buttercup-Middleware"}' \
   "$URL/servicesNS/nobody/SA-ITOA/itoa_interface/service/<_key>?is_partial_data=1"
 ```
 

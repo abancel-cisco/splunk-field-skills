@@ -109,7 +109,7 @@ A reference table for the `Collection Method/Agent` column in a Splunk project t
 | JBoss / Tomcat / TIBCO BW JMX | `OTel jmxreceiver` | `sim_metrics` | `jmx (OTel)` |
 | TIBCO EMS queues (default) | `OTel tibcoems receiver` | `sim_metrics` or `tibco` | `tibco:ems` |
 | TIBCO EMS queues (HF-routed exception) | `Splunk DB Connect on HF (JDBC to TIBCO EMS admin SQL)` | `tibco` (event-based) → derived metrics | `tibco:ems_queue_stats` |
-| App log files (Linux/Windows) | `OTel filelog receiver` | `<perimeter>` (e.g. `tibco`, `mes`) | `<vendor>:<component>` (e.g. `tibco:bw`, `readsoft:interpret`) |
+| App log files (Linux/Windows) | `OTel filelog receiver` | `<perimeter>` (e.g. `middleware`, `fulfilment`) | `<vendor>:<component>` (e.g. `tibco:bw`, `jboss:server`) |
 | Oracle metrics | `OTel oracledbreceiver` (native) | `<perimeter>_db` | `oracle (OTel native)` |
 | SQL Server metrics | `OTel sqlserverreceiver` (native) | `<perimeter>_db` | `mssql (OTel native)` |
 | Custom DB query | `OTel sqlqueryreceiver` | `<perimeter>_db` | `oracle:custom` or similar |
@@ -221,7 +221,7 @@ The SIM add-on for ITSI is what bridges Splunk Observability Cloud metrics into 
 - It expects metrics with `host.name` dimension for the entity lookup to ITSI
 - It expects the SignalFx API token (the long opaque token from the O11y org); supply it from the environment or a secret store, never inline in a committed config
 
-When populating the `Index` column of a Data Sources / KPIs row for a metric flowing via SIM, write `sim_metrics`. Use the perimeter-specific index (e.g. `tibco`, `mes`, `readsoft`) only for log data.
+When populating the `Index` column of a Data Sources / KPIs row for a metric flowing via SIM, write `sim_metrics`. Use the perimeter-specific index (e.g. `middleware`, `fulfilment`, `erp`) only for log data.
 
 ## Per-host ingestion checklist
 
@@ -257,7 +257,7 @@ Good:
 - `OTel filelog receiver (multiline regex: ^\d{4}-\d{2}-\d{2}; encoding: utf-8)`
 - `OTel oracledbreceiver (read-only role: splunk_ro; port 1541)`
 - `OTel tibcoems receiver (admin URL tcp://emshost:7222; svc acct: splunk_ems_ro)`
-- `PowerConnect for SAP (ABAP install on ECC ED3, push via HEC)`
+- `PowerConnect for SAP (ABAP install on the ECC system, push via HEC)`
 
 Bad (vague):
 - `otel`

@@ -155,7 +155,7 @@ The default PIL font and many system fonts don't carry the `↔ ↑ ↓ →` gly
 
 ### Gotcha 7: viz / dataSource IDs MUST be `[A-Za-z0-9_]+` only — dashes black-screen the renderer
 
-The React canvas for `gt_version=beta` looks up viz and dataSource references using a strict identifier regex. If a viz ID contains a hyphen, a period, a space, or any other non-alphanumeric (`viz_001_I2P_-_Functional`, `viz.health-score`, `ds.SAP HANA`), the renderer **does not throw a visible error** — the whole canvas mounts as a black `<div>` with no tiles, no backdrop, no message. The GT is readable via REST, the JSON is valid, but the page just goes black.
+The React canvas for `gt_version=beta` looks up viz and dataSource references using a strict identifier regex. If a viz ID contains a hyphen, a period, a space, or any other non-alphanumeric (`viz_001_Buttercup-Invoicing_-_Functional`, `viz.health-score`, `ds.Buttercup-ERP-DB`), the renderer **does not throw a visible error** — the whole canvas mounts as a black `<div>` with no tiles, no backdrop, no message. The GT is readable via REST, the JSON is valid, but the page just goes black.
 
 The SAP-GT-Template convention is `viz_[A-Za-z0-9]{10}` and `ds_[A-Za-z0-9]{10}`. Mirror it:
 
@@ -213,7 +213,7 @@ When a glass table renders as a black screen, work this list in order — the fi
 6. Verify top-level `swap_service_ids` (list) and `selected_swap_service_id` (null or string) are present (Gotcha 8).
 7. Verify `gt_version == 'beta'` exactly (string).
 8. Verify the backdrop `_key` in `definition.layout.options.backgroundImage.src` actually exists in the `SA-ITOA_files` KV store with a non-empty `data` field (NOT `payload`; the field name is `data`).
-9. Compare top-level field set against `SAP-GT-Template` (`_key=ff8fb461-bba4-11ea-b52e-000d3a79206f`) — any key SAP has that you don't may be required.
+9. Compare top-level field set against `SAP-GT-Template` (`_key=ff8fb461-bba4-11ea-b52e-000d3a79206f`) — any key that template has and yours does not may be required.
 
 The fastest diagnostic is a structural diff against SAP-GT-Template. Build a one-liner that GETs both and prints field-set deltas before opening the browser.
 
@@ -241,7 +241,7 @@ BG_NAME   = 'my-backdrop-v1.png'
 
 # Service -> SHS KPI ID map (use SHKPI-<service_id> convention).
 SHS_MAP = {
-    'I2P - Functional': 'SHKPI-ee7a0281-d9c0-4a11-a6fe-e382dc709e4e',
+    'Buttercup-Invoicing - Functional': 'SHKPI-ee7a0281-d9c0-4a11-a6fe-e382dc709e4e',
     # ...
 }
 
@@ -422,7 +422,7 @@ def create_glasstable(definition):
 
 # Example tiles list (use coordinates that align with your backdrop):
 TILES = [
-    ('I2P - Functional', 232, 440, 280, 80),
+    ('Buttercup-Invoicing - Functional', 232, 440, 280, 80),
     # ...
 ]
 
@@ -439,7 +439,7 @@ if __name__ == '__main__':
 
 ## Layout strategies
 
-### 4-column "perimeter lanes" (typical for I2P / SAP / Middleware / MES customers)
+### 4-column "perimeter lanes" (typical for a four-perimeter deployment)
 
 - Canvas 2667 × 1500
 - 4 columns at left-edges `[60, 742, 1424, 2106]`, width 622, gutter 60

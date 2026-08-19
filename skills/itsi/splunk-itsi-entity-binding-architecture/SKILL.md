@@ -47,7 +47,7 @@ The full chain that scopes a KPI to "only the entities that belong to this servi
 │        value: "*" },              <-- THE KEYSTONE. tells ITSI which alias    │
 │                                       to use as the entity↔data join key      │
 │      { field: "service",       field_type: "info",  rule_type: "matches",      │
-│        value: "tibco-bw - platform" }   <-- business-attribute selector       │
+│        value: "buttercup-bus - platform" }   <-- business-attribute selector       │
 │    ]                                                                           │
 │  }]                                                                            │
 │  Both clauses are required:                                                    │
@@ -96,21 +96,21 @@ The full chain that scopes a KPI to "only the entities that belong to this servi
 | "Pseudo entities" (synthetic names like `unknown_host` or hash-suffixed) showing under the service | Layer 1 (identifier/alias mismatch with data) | Inspect `identifier.values` on the bound entities; verify the value matches what `by host.name` (or your equivalent) produces in the base search |
 | **Only `SHKPI-*` rows appear in `itsi_summary`, zero real KPI rows** (both aggregate and entity) | Layer 1/2 membership not resolved when the indicator was generated | The generated indicator derives `serviceid` via `match_entities(<alias>, sec_grp)` then `mvexpand serviceid`. If entity→service membership isn't resolved, `serviceid=null` → every KPI row is dropped, leaving only the health monitor's `SHKPI-*` rows. Confirm membership on the **entity** object (`services` count > 0), then re-save the base search to force indicator regeneration and wait for the next **scheduled** run. See multi-service worked example below |
 
-## Worked example: TIBCO-BW Platform service (OS Hosts SIM data)
+## Worked example: Buttercup-Bus Platform service (OS Hosts SIM data)
 
 ### Layer 1 — Entity import populates this on each host
 
 ```json
 {
-  "title": "tibhost01.example.com",
+  "title": "mwhost01.example.com",
   "entity_type": "OS Hosts",
   "identifier": {
     "fields": ["ITSIUniqueId", "SignalFxCloudServiceId", "host_name"],
-    "values": ["tibhost01.example.com", "tibhost01.example.com", "tibhost01.example.com"]
+    "values": ["mwhost01.example.com", "mwhost01.example.com", "mwhost01.example.com"]
   },
   "_itsi_informational_lookups": [
-    "service::tibco-bw - platform",
-    "perimeter::tibco",
+    "service::buttercup-bus - platform",
+    "perimeter::buttercup-middleware",
     "application::businessworks",
     "..."
   ]
@@ -119,7 +119,7 @@ The full chain that scopes a KPI to "only the entities that belong to this servi
 
 Notes:
 - `ITSIUniqueId` is in `identifier.fields` — this is what enables it to act as an alias-type rule field
-- `service::tibco-bw - platform` is lowercase — ITSI lowercases info-field values at import time
+- `service::buttercup-bus - platform` is lowercase — ITSI lowercases info-field values at import time
 - The `ITSIUniqueId` value equals the clean host name, with no hash suffix appended
 
 ### Layer 2 — Service entity rule
@@ -131,7 +131,7 @@ Notes:
       "rule_condition": "AND",
       "rule_items": [
         { "field": "ITSIUniqueId", "field_type": "alias", "rule_type": "matches", "value": "*" },
-        { "field": "service",      "field_type": "info",  "rule_type": "matches", "value": "tibco-bw - platform" }
+        { "field": "service",      "field_type": "info",  "rule_type": "matches", "value": "buttercup-bus - platform" }
       ]
     }
   ]
@@ -209,7 +209,7 @@ The KPI inherits the base search settings but the `is_service_entity_filter` is 
 
 ## Worked example (multi-service): flow model — N leaf lanes + 1 E2E rollup off ONE shared base search
 
-Validated on Acme ITSI Cloud 5.x, 2026-08-12 (TIBCO integration-layer flow). This is the reusable
+Validated on Acme ITSI Cloud 5.x, 2026-08-12 (Buttercup-Middleware integration-layer flow). This is the reusable
 idiom when you want to model a **flow** (integration interfaces, process steps, pipeline stages) as
 several leaf services plus one end-to-end rollup — while staying performance-minimal (**one** base
 search + **one** indicator feeds all of them).
@@ -217,19 +217,19 @@ search + **one** indicator feeds all of them).
 ### Shape
 
 ```
-                 ┌─────────────── ONE shared base search (BS_TIBCO_Flow) ───────────────┐
-                 │  index=tibco_db sim=true | ... | stats ... by iface                    │
-                 │  is_service_entity_filter=True                                         │
-                 └───────────────────────────────┬───────────────────────────────────────┘
-                                                  │  (one generated indicator search)
-        ┌─────────────┬─────────────┬────────────┴──────────┬──────────────────────────┐
-   Leaf: MRP     Leaf: WRM     Leaf: ECC-QA-US        Leaf: LIMS-US            Rollup: Integration Flow (E2E)
-   rule: iface   rule: iface   rule: iface            rule: iface             rule: tibco_model matches "flow"
-     matches MRP   matches WRM   matches ECC-QA-US      matches LIMS-US        (aggregates ALL lane entities)
-        │             │             │                      │                          │
-   entity: "TIBCO MRP Interface"  ... one REAL entity per lane, each with:
-        iface=<lane>         (identifier/alias  → per-lane leaf scoping)
-        tibco_model=flow     (info tag          → shared key the rollup matches)
+                 ┌──────────── ONE shared base search (BS_Buttercup_Flow) ────────────┐
+                 │  index=flow_db sim=true | ... | stats ... by iface                 │
+                 │  is_service_entity_filter=True                                     │
+                 └──────────────────────────────┬─────────────────────────────────────┘
+                                                │  (one generated indicator search)
+        ┌───────────────┬───────────────┬───────┴───────┬──────────────────────────────┐
+   Leaf: ORDERS    Leaf: SHIPPING   Leaf: ERP-QA    Leaf: LABS       Rollup: Integration Flow (E2E)
+   rule: iface     rule: iface      rule: iface     rule: iface      rule: flow_model matches "flow"
+    matches ORDERS  matches SHIPPING matches ERP-QA  matches LABS    (aggregates ALL lane entities)
+        │               │                │               │                        │
+   entity: "Buttercup Orders Interface"  ... one REAL entity per lane, each with:
+        iface=<lane>        (identifier/alias  → per-lane leaf scoping)
+        flow_model=flow     (info tag          → shared key the rollup matches)
 ```
 
 ### The two rules that make it work
@@ -237,14 +237,14 @@ search + **one** indicator feeds all of them).
 - **Each leaf service** matches on the per-lane alias field: `iface matches "<lane>"`. Because
   `is_service_entity_filter=True`, its KPIs are scoped to that one lane's entity only.
 - **The E2E rollup service** matches on a **shared info tag** present on *every* lane entity:
-  `tibco_model matches "flow"`. So it dynamically aggregates all lanes with no hard-coded list — add
+  `flow_model matches "flow"`. So it dynamically aggregates all lanes with no hard-coded list — add
   a new interface later and it joins the rollup automatically once tagged.
 
 Each lane entity therefore belongs to **two** services (its leaf + the rollup). That `services=2`
 count is your fast membership-resolution check:
 
 ```bash
-GET /servicesNS/nobody/SA-ITOA/itoa_interface/entity?fields=title,iface,tibco_model,services&count=0
+GET /servicesNS/nobody/SA-ITOA/itoa_interface/entity?fields=title,iface,flow_model,services&count=0
 # each lane entity → services == 2  (leaf + E2E rollup). 0 or 1 ⇒ membership not resolved yet.
 ```
 
@@ -272,7 +272,7 @@ re-save the **base search** (full-object POST) to regenerate the indicator, then
 ### Diagnose by service id, not by source
 
 `itsi_summary` rows are keyed by `itsi_service_id` / `itsi_kpi_id`, **not** by a `source` that
-contains the base-search name. Don't filter `source="*BS_TIBCO_Flow*"` (returns 0). Instead:
+contains the base-search name. Don't filter `source="*BS_Buttercup_Flow*"` (returns 0). Instead:
 
 ```spl
 index=itsi_summary itsi_service_id IN ("<leaf1>","<leaf2>",...,"<e2e>") earliest=-30m latest=now
@@ -280,7 +280,7 @@ index=itsi_summary itsi_service_id IN ("<leaf1>","<leaf2>",...,"<e2e>") earliest
 ```
 
 Healthy result: each leaf shows its own lane's values; the E2E service shows the sums/worst-of
-across lanes; a graded KPI on one lane (e.g. MRP backlog `medium`) rolls its severity up into the
+across lanes; a graded KPI on one lane (e.g. ORDERS backlog `medium`) rolls its severity up into the
 E2E rollup's health.
 
 ### Performance note
@@ -339,7 +339,7 @@ When a service-scoped KPI is misbehaving, walk the layers in this order — neve
 | Missing the alias-type `matches *` clause in the entity rule | Entities bind correctly, but KPI shows only aggregated value (no per-entity); entity filtering doesn't work | Add `{field: "<alias>", field_type: "alias", rule_type: "matches", value: "*"}` as the first rule_item. This is the keystone — it tells ITSI which alias to use as the join key |
 | Setting `entity_alias_filtering_fields` on the base search but forgetting the per-KPI flag | KPI shows all hosts in the data, not just service-bound ones | Set `is_service_entity_filter=True` on each KPI individually. The base search setting alone is not enough |
 | Renaming the alias in the base search but the entity's identifier doesn't have that alias | Base search produces rows, KPI runs but shows zero entities | The alias name in the base search's `rename ... as ITSIUniqueId` must match a field in the entity's `identifier.fields` |
-| ITSI rule value in mixed case (e.g., `"TIBCO-BW - Platform"`) | Rule doesn't seem to match in GUI testing but appears to work in storage | ITSI's rule matching is **case-insensitive** for info fields (despite the GUI displaying mixed case). The stored value is lowercased on import. Match on lowercase to be safe; either works at runtime |
+| ITSI rule value in mixed case (e.g., `"Buttercup-Bus - Platform"`) | Rule doesn't seem to match in GUI testing but appears to work in storage | ITSI's rule matching is **case-insensitive** for info fields (despite the GUI displaying mixed case). The stored value is lowercased on import. Match on lowercase to be safe; either works at runtime |
 | Patching the KPI via REST with a payload that wipes `search` field | PATCH succeeds (200 OK) but `is_service_entity_filter` doesn't change | Validation failure silently rolls back the change. Include the existing `search` value (or omit the field) when PATCHing other KPI fields |
 | Trying to PATCH `is_service_entity_filter=False` on a KPI whose service entity rule has the alias clause | Field stays True after PATCH | ITSI auto-reasserts True when the entity rule includes a valid alias clause. Working as designed |
 | Same physical host in two services with two different KPI sets | Both services show the host but KPIs from both leak into each other | This is fine when both services' rules match the host AND both KPIs have `is_service_entity_filter=True`. The per-KPI filter scopes each KPI's data to that service's bound entities only |
@@ -364,7 +364,7 @@ If the GUI's "Service matches entities on fields" line shows only `service` (mis
 | Anti-pattern | Why it's bad | Fix |
 |---|---|---|
 | Using the entity's `host_name` info field instead of an alias-type field for filtering | `info` fields are designed for grouping/labeling, not for high-cardinality join keys. ITSI's filter injection logic specifically requires an alias-type field | Always use an alias-type identifier field (`ITSIUniqueId`, `host`, `aws_instance_id`...) for filtering. Reserve info fields for business attributes |
-| Creating one base search per service ("custom CPU search for TIBCO-BW", "custom CPU search for MES") | N services × M metrics = N×M searches, all doing the same `mstats`. Wastes search head, search-scheduler load | One generic base search per data source + entity type (e.g., one for `SIM OS Hosts`, one for `SIM Azure VM`). All services share it. Layer 4 filter scopes each instance |
+| Creating one base search per service ("custom CPU search for Buttercup-Bus", "custom CPU search for Buttercup-Fulfilment") | N services × M metrics = N×M searches, all doing the same `mstats`. Wastes search head, search-scheduler load | One generic base search per data source + entity type (e.g., one for `SIM OS Hosts`, one for `SIM Azure VM`). All services share it. Layer 4 filter scopes each instance |
 | Hard-coding the entity list in the KPI search with `| where host IN (...)` | Doesn't update when entities are added/removed; bypasses the entity store; defeats the point of the entity model | Use the entity store + entity rules + `is_service_entity_filter`. The injection happens at search time and always reflects current state |
 | Setting `is_entity_breakdown=true` on a base search but `is_entity_breakdown=false` on the KPI | KPI silently shows only aggregate; debugging takes hours | Keep both layers consistent. If you want breakdown, set true on both |
 | Using different alias fields in different KPIs of the same service | Each KPI does its own join; some work and some don't | Pick ONE alias per service (per entity_type) and use it consistently — entity rule, base search, all KPIs. Cross-service can use different aliases per type, but within a service stay consistent |

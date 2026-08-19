@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-static-data-replay
 category: itsi
-description: Make static / historical / one-shot-loaded data appear "live" to Splunk ITSI KPIs using the earliest=1 + `eval _time=now()` macro trick. Covers why ITSI KPI base searches see nothing when event _time is in the past (or when a source is a periodic full-table dump that never advances), the single-macro pattern that centralizes the override so one edit flips back to live, the mandatory dedup for re-emitted snapshot rows, how inline earliest/latest beats ITSI's dispatch window, and validation via the indicator dispatch + itsi_summary. Use when ITSI KPIs read 0 / N-A / gray on data that clearly exists in the index, when demoing on frozen or replayed datasets (SAP Cockpit, PowerConnect exports, old project data), when the user mentions static data, historical timestamps, backfill, replay, "trick ITSI into thinking it's live", earliest=1, _time=now, or a macro to override timestamps for KPIs.
+description: Make static / historical / one-shot-loaded data appear "live" to Splunk ITSI KPIs using the earliest=1 + `eval _time=now()` macro trick. Covers why ITSI KPI base searches see nothing when event _time is in the past (or when a source is a periodic full-table dump that never advances), the single-macro pattern that centralizes the override so one edit flips back to live, the mandatory dedup for re-emitted snapshot rows, how inline earliest/latest beats ITSI's dispatch window, and validation via the indicator dispatch + itsi_summary. Use when ITSI KPIs read 0 / N-A / gray on data that clearly exists in the index, when demoing on frozen or replayed datasets (ERP document extracts, PowerConnect exports, old project data), when the user mentions static data, historical timestamps, backfill, replay, "trick ITSI into thinking it's live", earliest=1, _time=now, or a macro to override timestamps for KPIs.
 disable-model-invocation: true
 ---
 
@@ -16,7 +16,7 @@ A deliberate, dirty workaround: force static/historical data to be evaluated by 
 ITSI KPI base searches run on a rolling window (e.g. dispatch `earliest=-330s latest=-30s`) against **`_time`**. They return nothing when:
 
 - Event `_time` is in the past (historical load, `_time` = a business timestamp like invoice creation date).
-- The source is a **periodic full-table dump / snapshot** (PowerConnect COCKPIT tables, config exports): the same rows are re-emitted every cycle, nothing new ever enters the rolling window.
+- The source is a **periodic full-table dump / snapshot** (PowerConnect table extracts, config exports): the same rows are re-emitted every cycle, nothing new ever enters the rolling window.
 - You are replaying a frozen dataset months later.
 
 Symptom: data is obviously in the index (`| stats count` over all time is non-zero) but KPIs show `0` / `N/A` / gray health.
@@ -36,9 +36,9 @@ Put the whole retrieval + normalize + dedup + replay in a single Splunk macro. T
 
 ```spl
 # macro: cockpit_ap_invoices_src   (app: itsi, shared global so the indicator search resolves it)
-index=sap sourcetype=sap:abap source=ED3 "/COCKPIT/THDR" DOCNO=* earliest=1 latest=now   <-- replay line 1
-| dedup INVOICE_GUID sortby -_indextime          <-- snapshot dump: collapse to 1 row per entity
-| eval posted=if(SAP_DOC_NO!="" AND SAP_DOC_NO!="0000000000","posted","not_posted")
+index=erp sourcetype=erp:doc source=PR1 "/DOCFLOW/HEADER" DOC_NO=* earliest=1 latest=now   <-- replay line 1
+| dedup DOC_GUID sortby -_indextime          <-- snapshot dump: collapse to 1 row per entity
+| eval posted=if(DOC_NO!="" AND DOC_NO!="0000000000","posted","not_posted")
 | eval fi_flag=if(FI_MM_FLG=="FI",1,0), mm_flag=if(FI_MM_FLG=="MM",1,0)
 | eval _time=now()                                <-- replay line 2
 ```
@@ -47,7 +47,7 @@ ITSI base search (`base_search` field) then follows the normal shared-base patte
 
 ```spl
 `cockpit_ap_invoices_src`
-| stats dc(INVOICE_GUID) as total_invoices sum(fi_flag) as fi_invoices ...
+| stats dc(DOC_GUID) as total_invoices sum(fi_flag) as fi_invoices ...
 | eval ITSIUniqueId="GLOBAL"
 ```
 
