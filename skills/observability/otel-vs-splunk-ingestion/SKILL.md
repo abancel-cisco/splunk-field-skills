@@ -125,7 +125,7 @@ The `sim_metrics` index is the default created by the SIM (Splunk Infrastructure
 Don't use UF reflexively. But it's the right call when:
 
 1. **The ops team already runs UF at scale** and won't accept introducing a second agent for this project. Pick your battles.
-2. **Configuration has to be managed from Splunk itself.** A deployment server plus `serverclass.conf` pushes inputs and apps to thousands of forwarders, and withdraws them again, from inside the platform the team already administers. OTel has no equivalent yet: OpAmp is the right direction and worth tracking, but until it is there you are managing collector config with Ansible / Puppet / Chef or a Kubernetes operator. That is a second toolchain for the same fleet, and often a second team — which is a real objection from an ops group, not a preference.
+2. **Configuration has to be managed from Splunk itself.** A deployment server plus `serverclass.conf` pushes inputs and apps to thousands of forwarders, and withdraws them again, from inside the platform the team already administers. OTel has no equivalent yet: OpAmp is the right direction and worth tracking, but until it is there you are managing collector config with Ansible / Puppet / Chef or a Kubernetes operator. That is a second toolchain for the same fleet, and often a second team — which is a real objection from an ops group, not a preference. When you have to argue this concretely, Splunk's own `deployment-server-and-forwarder-fleet-management` skill documents the mechanics to cite: server classes, client filters, phone-home and effective-assignment behaviour, and the Remote Upgrader path for Linux forwarders. Fleet upgrades are usually the second half of this objection, and OTel has no in-platform answer to that either.
 3. **An add-on has to work end to end.** A TA's props, transforms, eventtypes and CIM mappings are all keyed on sourcetype, and so is any ITSI or ES content sitting on top of them. Change how the data arrives and none of it fires. You can make OTel emit the sourcetype and the shape a TA expects, but then you have reimplemented the add-on's contract and you own it at every future TA release. UF plus the TA gives you the whole chain, search-time logic included — which for a deep TA like Splunk_TA_nix is most of its value, ingestion being the smaller part.
 4. **You need scripted inputs that aren't easily wrapped by OTel filelog** (e.g. running a CLI command and ingesting its stdout). Possible in OTel via `execreceiver`, but UF's `[script://]` input is older and more battle-tested.
 5. **Bandwidth-constrained edge sites** where UF's tested compression / deduplication is more optimized than OTel's current state.
@@ -250,6 +250,18 @@ Bad (vague):
 - `splunk-itsi-kpi-creation-via-api` — turning the collected data into KPIs
 - `splunk-itsi-service-tree-design` — where those KPIs hang in the service tree
 - `splunk-itsi-content-pack-creation` — packaging the base searches that consume these sources
+
+## Related external skills
+
+This skill only decides *which* mechanism to use. Once decided, two public catalogues cover
+the installation and operation it deliberately stops short of.
+
+- **chambear2809** has per-mechanism setup automation: `splunk-universal-forwarder-setup`,
+  `splunk-observability-otel-collector-setup`, `splunk-connect-for-otlp-setup`, and
+  `splunk-hec-service-setup`, each render-first with a validation step.
+- **Splunk** has `deployment-server-and-forwarder-fleet-management` for the UF fleet
+  argument above, and `hec-setup-and-troubleshooting` when a HEC delivery path is failing
+  rather than being designed.
 
 Treat SignalFx and HEC tokens as credentials throughout. Keep them in the collector's
 environment or a secret store, never in a tracker, a config committed to a repository, or

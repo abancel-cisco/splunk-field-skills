@@ -2,15 +2,17 @@
 name: external-knowledge-sources
 category: _meta
 description: >-
-  Registry of external, actively-maintained knowledge sources this library references LIVE (by pointer, never copied): (1) chambear2809/splunk-cisco-skills — operational setup & automation SKILL.md files for Splunk and Cisco products (install/config workflows, Splunk Cloud ACS, HEC, OTel/SC4S/SC4SNMP collectors, Enterprise Security, ITSI setup/config, Observability Cloud, AppDynamics, ThousandEyes, Galileo MCP); (2) fenre splunk-monitoring-use-cases — a catalog of 7900+ infrastructure monitoring use cases (SPL + CIM data-model mappings, criticality, TA/app hints) across 23 technology domains. Use when a task needs Splunk/Cisco product setup automation, or ready-made monitoring / KPI / detection SPL, beyond what the local library covers (e.g. "how do I install and configure the Cisco ACI app", "give me SPL to monitor VMware host contention", "what use cases exist for Kubernetes OOM kills"). ALWAYS fetch the live URLs on demand at use time; never rely on a cached snapshot, because both sources are updated frequently.
+  Registry of external, actively-maintained knowledge sources this library references LIVE (by pointer, never copied): (1) chambear2809/splunk-cisco-skills — operational setup & automation SKILL.md files for Splunk and Cisco products (install/config workflows, Splunk Cloud ACS, HEC, OTel/SC4S/SC4SNMP collectors, Enterprise Security, ITSI install plus declarative service/KPI/entity/dependency/NEAP configuration and content-pack import, Observability Cloud, AppDynamics, ThousandEyes, Galileo MCP); (2) fenre splunk-monitoring-use-cases — a catalog of 7900+ infrastructure monitoring use cases (SPL + CIM data-model mappings, criticality, TA/app hints) across 23 technology domains; (3) splunk/splunk-agent-skills — the vendor's own experimental skills, advisory and read-only by design (search-performance tuning, upgrade readiness, HEC troubleshooting, deployment-server and forwarder fleet behaviour, knowledge-object governance, field extraction / CIM mapping, classic-to-Dashboard-Studio conversion, Cloud ACS admin). Use when a task needs Splunk/Cisco product setup automation, ready-made monitoring / KPI / detection SPL, or vendor-authored read-only diagnosis of a platform problem, beyond what the local library covers (e.g. "how do I install and configure the Cisco ACI app", "give me SPL to monitor VMware host contention", "what use cases exist for Kubernetes OOM kills"). ALWAYS fetch the live URLs on demand at use time; never rely on a cached snapshot, because all three are updated frequently — one of them reshaped its entire published skill set twice inside a single month.
 disable-model-invocation: true
 ---
 
 # External Knowledge Sources
 
-This library is the team's **own** source of truth. It also **references** two external,
+This library is the team's **own** source of truth. It also **references** three external,
 publicly maintained knowledge bases that are updated far too often to copy in. Treat this
-file as a **live pointer**, not a snapshot:
+file as a **live pointer**, not a snapshot. The numbering below is filing order, not
+precedence: source 3 is Splunk's own repository and outranks this library wherever the two
+genuinely overlap.
 
 > **Golden rule:** when a source below is relevant, **fetch its live entry-point URL on
 > demand** (web fetch / `curl`) and work from that. Do **not** paste large excerpts into
@@ -39,8 +41,15 @@ skills expose `--help`, dry-run, render, preflight, then apply, then validate.
 - You need to **install / configure** a Splunk app, TA, HEC, index, or ACS admin task.
 - You need **collector** setup: OTel/OTLP, SC4S (syslog), SC4SNMP, Edge Processor, Stream.
 - You need **Enterprise Security**, SOAR, UBA, Federated Analytics, or security routing setup.
-- You need **ITSI product install/upgrade** or ITSI service/KPI/entity/content-pack *setup*
-  automation (complements this library's ITSI *design* skills).
+- You need **ITSI product install/upgrade** (`splunk-itsi-setup`), or you want ITSI objects
+  applied **declaratively from a reviewed spec** rather than hand-rolled REST calls
+  (`splunk-itsi-config`: entities, services, embedded KPIs, dependencies, service-template
+  links, NEAPs, plus content-pack import from the live Content Library, with lint, GET-only
+  preview, drift check, and guarded cleanup). Note the layer boundary and read it before
+  assuming coverage: that skill materialises and reconciles a model, it does not decide what
+  the model should be, and its own reference material declares an ITSI 4.21 implementation
+  baseline while warning that 5.0 features are not validated. Design judgement and 5.0
+  behaviour stay with this library's ITSI skills.
 - You need **Observability Cloud**, APM, RUM, DBMon, or cloud-integration onboarding.
 - You need **AppDynamics**, **ThousandEyes**, or **Galileo MCP** wiring.
 
@@ -101,9 +110,51 @@ visualization hints.
 
 ---
 
+## 3. splunk / splunk-agent-skills
+
+Splunk's **own** experimental agent skills. Different genre from the two sources above and
+from this library: every skill is advisory and read-only by construction, reasoning from
+current public documentation plus evidence the user supplies, and explicitly refusing to
+change a deployment. Where a task crosses its boundary it routes rather than acts.
+
+- **Canonical repo:** https://github.com/splunk/splunk-agent-skills
+- **License:** Apache-2.0. Experimental, and *not* covered by a Splunk support contract —
+  its own README says so. Do not present it to a Splunk user as supported product guidance.
+- **Precedence:** it is the vendor's repository. On any genuine overlap, prefer it and say
+  so; the useful contribution here is then a pointer, not a second opinion.
+
+### When to reach for it
+- A **platform-level diagnosis** where the deliverable is a cited, evidence-labelled
+  finding rather than a change: slow or queued searches, HEC delivery failures, SAML and
+  role/capability access problems, health and diagnostic collection, vulnerability or
+  compliance posture.
+- **Upgrade or lifecycle planning** for Splunk Enterprise or Cloud, or app/add-on
+  packaging, compatibility, and migration questions.
+- **Knowledge-object hygiene**: ownership, orphans, ACLs, naming collisions, lookups,
+  search-head-cluster comparison.
+- **Deployment server / forwarder fleet** mechanics — server classes, client filters,
+  phone-home, effective assignment, Remote Upgrader boundaries.
+- **Dashboard conversion** from classic Simple XML to Dashboard Studio, or building a
+  custom visualization.
+- A **general product question** needing citations and an explicit statement of what is
+  uncertain.
+
+### How to use it (fetch live)
+1. Skill list and install commands: `https://raw.githubusercontent.com/splunk/splunk-agent-skills/main/README.md`
+2. A specific skill body: `https://raw.githubusercontent.com/splunk/splunk-agent-skills/main/skills/<skill-name>/SKILL.md`
+3. Support and security posture before quoting it to anyone: `SUPPORT.md`, `SECURITY.md`.
+
+### Volatility warning
+This repository churns hard, and not only additively — it has both trimmed its published
+set to a single domain and repopulated it within the same month. Never hard-code its skill
+list, its skill count, or a claim about what it does not cover; re-check at use time. Two of
+its skills also need a separately installed CLI (`acs`, and a Go-built `splsearch`), so a
+skill being listed does not mean it is runnable here.
+
 ## Attribution & hygiene
-- These are **third-party** sources. Attribute them, respect their licenses (chambear2809 is
-  Apache-2.0), and do not present their content as the team's own authored material.
+- These are **third-party** sources. Attribute them, respect their licenses (chambear2809 and
+  splunk are both Apache-2.0), and do not present their content as the team's own authored
+  material.
 - If either URL 404s or a project restructures, update the entry-point URLs in **this file**
   (it is the single place the library records them).
 - Do not fetch these on every session by default — only when the active task matches the

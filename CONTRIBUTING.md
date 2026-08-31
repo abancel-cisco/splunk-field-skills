@@ -50,11 +50,21 @@ If a skill already exists there, the useful contribution is usually a link, not 
 exists so agents can be pointed at those catalogues live, and it is a better home for a
 pointer than a duplicated skill that will drift.
 
-Overlap is not automatically disqualifying — adjacent is fine, duplicated is not. As an
-example, `splunk-dashboard-studio-rest` (create Studio dashboards through the REST API)
-sits next to Splunk's own `splunk-dashboard-converter` (convert classic Simple XML to
-Studio) without colliding: same product surface, different task. If your skill overlaps,
-say so in the PR and explain what it does that the existing one does not.
+Overlap is not automatically disqualifying — adjacent is fine, duplicated is not. The
+sharpest example is in this repository. `splunk-dashboard-studio-rest` and chambear2809's
+`splunk-dashboard-studio-setup` drive the same REST endpoint, with the same `name` +
+`eai:data` POST and the same version 2 XML wrapper. They coexist because the overlap stops
+at the plumbing: theirs adds ACL role-set governance, drift detection against the live
+view, and pre-overwrite snapshots, while ours carries the ITSI specifics theirs has no
+reason to model — the `ds.search` defaults key, the backdrop URI scheme that resolves only
+inside glass tables, and the app context that makes the ITSI summary macros work. Splunk's
+own `splunk-dashboard-converter` (classic Simple XML to Studio) is the easier case again:
+same product surface, different task.
+
+The line that example draws is worth stating directly. Repeating a few lines of another
+catalogue's plumbing is acceptable when it keeps a skill self-contained and reviewable;
+repeating its judgement is not. If your skill overlaps, say so in the pull request and
+explain what it does that the existing one does not.
 
 The same test applies inside this repository. Prefer extending an existing skill over
 adding a near-neighbour, and if you find two skills that have grown into each other,

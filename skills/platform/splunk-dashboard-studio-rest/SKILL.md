@@ -453,3 +453,20 @@ https://<stack>.splunkcloud.com/en-GB/app/<APP>/<NAME>
 - `splunk-itsi-api-access` — base ITSI REST patterns (auth, ssl, paging)
 - `splunk-itsi-service-tree-design` — designing the service tree that the dashboard will visualise
 - `splunk-itsi-kpi-creation-via-api` — companion pattern for creating KPIs the dashboard will surface
+
+## Related external skills
+
+Two public catalogues cover this same endpoint, and both are worth knowing before you
+hand-roll a deployment around the script above.
+
+- **chambear2809 `splunk-dashboard-studio-setup`** wraps the same `data/ui/views` POST in a
+  render-first CLI: it diffs the rendered `eai:data` against the live view byte for byte,
+  validates owner / sharing / exact `perms.read` and `perms.write` role sets, snapshots the
+  existing view and ACL before an overwrite, and gates updates behind an explicit accept
+  flag. Reach for it when the dashboard is a governed artifact that several people redeploy
+  and someone will ask what drifted. Stay here for the definition content it does not model
+  — ITSI macros, SHKPI data sources, and the glass-table translation traps above.
+- **Splunk `splunk-dashboard-converter`** turns an existing classic Simple XML dashboard
+  into a version 2 definition, preserving each SPL query verbatim. That is the natural
+  upstream step when the dashboard already exists in the older format; bring the resulting
+  definition back here to deploy it.
