@@ -63,7 +63,7 @@ skills directory.
 | [`splunk-itsi-glass-table-rest`](skills/itsi/splunk-itsi-glass-table-rest/SKILL.md) | Create glass tables over REST, with service health score tiles on a custom backdrop. |
 | [`splunk-itsi-entity-health-dashboards`](skills/itsi/splunk-itsi-entity-health-dashboards/SKILL.md) | Embed custom Simple XML dashboards as entity-type drilldowns: the token, time, ACL, and app contract. |
 | [`splunk-itsi-entity-health-dashboard-embed`](skills/itsi/splunk-itsi-entity-health-dashboard-embed/SKILL.md) | Case studies of embed failures, and the pattern that actually works. |
-| [`splunk-itsi-alert-driven-geo-health`](skills/itsi/splunk-itsi-alert-driven-geo-health/SKILL.md) | Drive service health from third-party alerts — episodes into a single episode-count KPI, scoped per service by entity binding rather than hardcoded names. |
+| [`splunk-itsi-event-driven-service-health`](skills/itsi/splunk-itsi-event-driven-service-health/SKILL.md) | Get health scores in days by deferring Service Insights — drive a service tree from alerts you already collect, through one episode-count KPI. |
 | [`splunk-itsi-bidirectional-ticketing`](skills/itsi/splunk-itsi-bidirectional-ticketing/SKILL.md) | Integrate third-party ticketing gateways with episodes, with REST payloads. |
 | [`splunk-itsi-hybrid-action-dispatching`](skills/itsi/splunk-itsi-hybrid-action-dispatching/SKILL.md) | Configure and troubleshoot notable-event action dispatch between a cloud manager node and an on-prem executor. |
 | [`splunk-itsi-performance-tuning`](skills/itsi/splunk-itsi-performance-tuning/SKILL.md) | Diagnose the saturated-scheduler class of problems: skipped searches, KPIs going N/A under load. |

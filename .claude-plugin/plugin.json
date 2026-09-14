@@ -5,7 +5,7 @@
     "./skills/_meta/external-knowledge-sources",
     "./skills/itsi/splunk-itsi-50-release-overview",
     "./skills/itsi/splunk-itsi-50-upgrade",
-    "./skills/itsi/splunk-itsi-alert-driven-geo-health",
+    "./skills/itsi/splunk-itsi-event-driven-service-health",
     "./skills/itsi/splunk-itsi-api-access",
     "./skills/itsi/splunk-itsi-bidirectional-ticketing",
     "./skills/itsi/splunk-itsi-common-errors",
