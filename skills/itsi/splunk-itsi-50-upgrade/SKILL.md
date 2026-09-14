@@ -72,31 +72,50 @@ If the target Splunk version is newer than what's installed:
 
 1. Stop Splunk.
 2. Back up `$SPLUNK_HOME`.
-3. Extract new Splunk tarball **over** existing install (preserve `etc/` and `var/`).
-4. Run `$SPLUNK_HOME/bin/splunk migrate <old-version>` if prompted.
-5. Start Splunk; verify `splunk version`.
+3. Extract new Splunk tarball **over** existing install (preserve `etc/` and `var/`). The tarball's
+   top level is `splunk/`, so extract into the **parent** of `$SPLUNK_HOME`:
+   ```bash
+   sudo -u splunk tar -xzf splunk-10.4.2-33c3bf42cd73-linux-amd64.tgz -C /opt
+   cat $SPLUNK_HOME/etc/splunk.version   # expect VERSION=10.4.2
+   ```
+4. Start with `--accept-license --answer-yes --no-prompt`; migration runs automatically (no
+   separate `splunk migrate` needed on 10.x). Startup validates every file against the shipped
+   manifest and prints `All installed files intact.`
+5. Verify `splunk version`.
 
-**Lab binaries (Linux amd64):** see project skill `lab-environment` for paths. Latest in archive: `splunk-10.4.1-5a009d941268-linux-amd64.tgz`.
+**Binaries (Linux amd64):** the build used here was `splunk-10.4.2-33c3bf42cd73-linux-amd64.tgz`. The hash in the filename is per-build, so take the current one from the Splunk download page rather than reusing this string.
+
+**Timings observed (single-instance lab, 5.3 GB of apps):** Splunk extract ~16 s, first start
+~31 s, ITSI extract ~4 s, ITSI first start ~28 s, KV-store migration drains within ~2 min.
+Budget far less than the "several minutes" worst case, but watch `itsi_migration_queue.log`.
 
 ## ITSI 5.0 install
 
 **Critical:** ITSI must be installed by **extracting the package into `etc/apps`**. Do **not** use Splunk Web app manager or `splunk install app` for ITSI.
 
+The `.spl` is a gzipped tar whose **top level is the app directories themselves** (19 of them:
+`SA-ITOA`, `itsi`, `SA-IndexCreation`, `SA-ITSI-*`, `DA-ITSI-*`, `SA-UserAccess`). There is **no
+wrapper directory**, so extract straight into `etc/apps`:
+
 ```bash
 $SPLUNK_HOME/bin/splunk stop
 
-# Extract ITSI 5.0 package
-cd /tmp
-tar -xzf splunk-it-service-intelligence_500.spl   # or unzip if .spl is zip format
-# Inspect top-level folder name (typically splunk-it-service-intelligence or SA-ITOA bundle)
+# Confirm layout first
+tar -tzf splunk-it-service-intelligence_501.spl | awk -F/ 'NF>1{print $1}' | sort -u
 
-# Copy/replace into etc/apps — follow package README for exact folder names
-# Standard: entire ITSI app bundle extracts multiple apps (SA-ITOA, itsi, etc.)
-cp -R splunk-it-service-intelligence/* $SPLUNK_HOME/etc/apps/
+# Extract directly over etc/apps (as the splunk user, to keep ownership)
+sudo -u splunk tar -xzf splunk-it-service-intelligence_501.spl -C $SPLUNK_HOME/etc/apps
 
-# Fix ownership if needed
+# Belt and braces
 chown -R splunk:splunk $SPLUNK_HOME/etc/apps/
 ```
+
+Extracting **over** existing apps replaces `default/` but leaves `local/` untouched (tar only
+writes paths present in the archive), so local customisations survive.
+
+Only the core apps carry the ITSI version — on a 5.0.0 → 5.0.1 upgrade, `SA-ITOA`, `itsi`,
+`SA-IndexCreation` and `SA-ITSI-Licensechecker` go to 5.0.1 while `DA-ITSI-*` stay at 4.17.0
+and `SA-ITSI-ATAD`/`SA-UserAccess` keep their own versions. That is expected, not a partial install.
 
 Start Splunk; first start runs **ITSI migration** — can take several minutes.
 

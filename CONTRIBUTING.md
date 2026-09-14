@@ -39,6 +39,7 @@ Before writing a new skill, search these first:
 | [`splunk/splunk-agent-skills`](https://github.com/splunk/splunk-agent-skills) | Splunk's own experimental skills | anything — this is the vendor's repository and takes precedence over ours on any overlap |
 | [`chambear2809/splunk-cisco-skills`](https://github.com/chambear2809/splunk-cisco-skills) | ~175 skills: Splunk and Cloud administration, TA and app install, Cisco onboarding, AppDynamics, ThousandEyes, collectors, SC4S, HEC, ACS | product install, configuration, and platform automation |
 | [`fenre/splunk-monitoring-use-cases`](https://fenre.github.io/splunk-monitoring-use-cases/) | ready-made SPL, CIM-aligned detections, KPI base searches by technology domain | any skill whose real payload is a search rather than a procedure |
+| [`gfransen-sfx/splunk-skills`](https://github.com/gfransen-sfx/splunk-skills) | Splunk Operator for Kubernetes labs on kind, and hybrid post-quantum (ML-KEM) TLS enablement | Kubernetes-hosted Splunk, or anything about TLS groups and post-quantum readiness |
 
 ```bash
 npx skills add splunk/splunk-agent-skills --list

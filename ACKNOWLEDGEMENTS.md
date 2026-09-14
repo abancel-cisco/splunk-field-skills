@@ -26,6 +26,17 @@ starting query for a KPI rather than a way to wire one up.
 
 Machine-readable index: <https://fenre.github.io/splunk-monitoring-use-cases/llms.txt>
 
+### [`gfransen-sfx/splunk-skills`](https://github.com/gfransen-sfx/splunk-skills)
+
+A small, sharply scoped pair of skills for work this repository does not touch at all:
+standing up a Splunk Operator for Kubernetes lab on Docker Desktop and kind, and then
+enabling and verifying hybrid post-quantum TLS on it — ML-KEM key-exchange groups for
+TLS 1.3, forwarder-to-indexer `splunktcp-ssl`, Splunk Web, and `openssl` probes to prove
+the negotiated group. Its own scope notes exclude production PKI design and FIPS mode.
+
+Worth knowing about if a Kubernetes-hosted lab or post-quantum readiness comes up, since
+neither appears anywhere here.
+
 ### [`splunk/splunk-agent-skills`](https://github.com/splunk/splunk-agent-skills)
 
 Splunk's own experimental agent skills repository. This repository's support and security
