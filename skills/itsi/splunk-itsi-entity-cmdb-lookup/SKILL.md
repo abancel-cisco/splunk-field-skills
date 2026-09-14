@@ -1,7 +1,18 @@
 ---
 name: splunk-itsi-entity-cmdb-lookup
 category: itsi
-description: Build and maintain a small CSV-based mini-CMDB lookup in Splunk ITSI to enrich entities with business context (perimeter, application, service, ownership) that machine data alone cannot provide. Drives dynamic entity filtering for infrastructure KPIs across multiple perimeters, identifies unmapped/unknown hosts via a scheduled mismatch-audit saved search, and stays editable by a human via the Lookup Editor add-on. Covers the Splunk-Cloud-safe creation pattern (`outputlookup createinapp=true` from a search instead of REST file upload), the multi-row-per-host pattern for hosts that belong to multiple services (e.g. one Middleware box hosting both a bus and a queue engine), the requirement to expose an alias-type identifier (e.g. ITSIUniqueId) on each entity to make service entity filtering work, the entity-type-name matching gotcha (must equal ITSI's stored entity types verbatim — typically `OS Hosts` or `Azure VM`), the case-insensitive matching gotcha, two consumption patterns (direct `lookup` in KPI search vs ITSI Entity Import for service entity rules), and the host-join-key pitfalls (FQDN drift, hash-suffixed entity titles, case mismatches, SignalFx-style dimensions vs `host`). Use when designing the "glue" between machine data and business perimeters in ITSI, when the user mentions entity tagging / perimeter filtering / entity rules / dynamic KPI scope / mini-CMDB / lookup-based enrichment / service column / multi-membership, when an entity import or info field approach is being considered, or when KPI searches need to be scoped to a subset of hosts that share a business attribute not present in the data stream.
+description: >-
+  Build and maintain a CSV-based mini-CMDB lookup in ITSI to enrich entities with business context
+  — perimeter, application, service, ownership — that machine data cannot supply. Drives dynamic
+  entity filtering for infrastructure KPIs, flags unmapped hosts through a scheduled mismatch
+  audit, and stays editable via the Lookup Editor. Covers the Splunk-Cloud-safe creation pattern
+  (outputlookup createinapp=true, not a REST upload), the multi-row-per-host pattern for a box in
+  several services (one host running two middleware services), the alias-type identifier entities
+  need before service entity filtering works, the entity-type name and case-matching gotchas, the
+  two consumption patterns (direct lookup versus Entity Import for entity rules), and the host
+  join-key pitfalls of FQDN drift, hash-suffixed titles and SignalFx-style dimensions. Use for
+  entity tagging, perimeter filtering, dynamic KPI scope or mini-CMDB enrichment, or when KPIs
+  must be scoped to hosts sharing a business attribute absent from the data.
 disable-model-invocation: true
 ---
 

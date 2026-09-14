@@ -1,7 +1,17 @@
 ---
 name: splunk-itsi-common-errors
 category: itsi
-description: Documents fixes for five recurring ITSI errors — (1) missing eventtype wineventlog-ds (install Splunk Add-on for Windows, then disable unneeded TA searches on the ITSI search head), (2) Could not load lookup=LOOKUP-dropdowns (run dropdowns_lookup_migrate without append=t, set dropdowns.csv permissions to global), (3) recommendthresholdtemplate external command failure (downgrade Splunk AI Toolkit to 5.6.* and Splunk SA Scientific Python to 4.2.* on ITSI 4.21; on Splunk Cloud open a support ticket), (4) Notable Event Actions queue backlog / NEAP outage from earemotesearch ProxyError (set NO_PROXY for the SH's own hostname in splunk-launch.conf, clear itsi_notable_event_actions_queue), (5) KPI historical/trend widget shows "The selected KPI has no data in the summary index. Backfill the KPI." even though index=itsi_summary clearly has recent events — because the historical/sparkline widgets read the itsi_summary_metrics METRICS index (via mstats), and the KPI's "Indicator - Shared - <BS> - ITSI Search" skipped recent cycles under search-concurrency saturation ("maximum number of concurrent historical scheduled searches has been reached"), leaving gaps in BOTH indexes; fix by spreading indicator schedules (alert_period) and cutting concurrent load, NOT by clicking Backfill; for split-by pseudo-entity KPIs an individual pseudo-entity's per-entity history is legitimately sparse. Validated on ITSI 4.21.* and ITSI 5.0.* (sections 1–2, 5). Use when ITSI UI or searches fail with these exact messages, during fresh ITSI installs, content-pack imports, KPI threshold AI setup, Unix dashboard pack troubleshooting, when webhook/notable-event actions stop firing behind an outbound proxy, or when KPI trend/sparkline charts read empty while the summary index has data.
+description: >-
+  Fixes for five recurring ITSI errors: the missing wineventlog-ds eventtype, "Could not load
+  lookup=LOOKUP-dropdowns", the recommendthresholdtemplate external command failure, a Notable
+  Event Actions queue backlog caused by an earemotesearch ProxyError behind an outbound proxy, and
+  the KPI trend widget reporting that the KPI has no data in the summary index and should be
+  backfilled while index=itsi_summary plainly has recent events. That last one is the expensive
+  one: the sparkline reads the itsi_summary_metrics metrics index, and the indicator search
+  skipped cycles under concurrency saturation, so backfilling does not fix it — spreading
+  alert_period does. Validated on ITSI 4.21.x and 5.0.x. Use when ITSI fails with these exact
+  messages, during fresh installs or content pack imports, when notable event actions stop firing
+  behind a proxy, or when KPI trend charts read empty while the summary index has data.
 disable-model-invocation: true
 ---
 
