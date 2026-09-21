@@ -68,9 +68,6 @@ Role=<role> is not grantable by user <user>
 ```
 
 **The SAML error is a stack configuration dependency, not something you can click past.** When users authenticate through SAML, Splunk can only re-resolve their roles at token-validation time if the SAML configuration has attribute query requests (AQR) or authentication extensions enabled. Without one of them it refuses to mint tokens for SAML-backed identities at all. Fixing it means changing the stack's authentication config — a Splunk Cloud admin or a support case.
-
-Working around it and diagnosing it are different jobs. Once the conversation moves to the stack's identity configuration, Splunk's own `splunk-identity-saml-readiness-advisor` in [`splunk/splunk-agent-skills`](https://github.com/splunk/splunk-agent-skills) is the better tool — a read-only advisory workflow for SAML, group-mapping and role failures. It does not cover token issuance, which is why this section exists.
-
 **The role error is separate and often self-inflicted.** A token cannot carry a role you lack authority to *grant*, even one you hold yourself. The New Token dialog pre-selects every role on your account, so the request fails on the first one that trips the check. Deselect what you don't need — an ITSI REST token rarely needs the Observability roles (`o11y_*`) the dialog tends to include.
 
 ### Workaround: issue the token on a different search head
