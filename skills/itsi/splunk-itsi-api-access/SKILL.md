@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-api-access
 category: itsi
-description: Access a Splunk ITSI Search Head over REST API. Covers prerequisites a Splunk admin must arrange (IP allowlist, dedicated REST tokens), JWT vs MCP token shapes, capabilities needed, 401 troubleshooting, common endpoint cheatsheet (itoa_interface/event_management_interface), search jobs oneshot vs async dispatches, notable event index gotchas, proxy egress configuration for loopback/internal subnets, and a shell helper template.
+description: Access a Splunk ITSI Search Head over REST API. Covers prerequisites a Splunk admin must arrange (IP allowlist, dedicated REST tokens), JWT vs MCP token shapes, token creation blocked on SAML stacks and the ad-hoc search head workaround, why the UI's Token ID is the jti rather than a recoverable token, checking exp before debugging a 401, capabilities needed, 401 troubleshooting, common endpoint cheatsheet (itoa_interface/event_management_interface), search jobs oneshot vs async dispatches, notable event index gotchas, proxy egress configuration for loopback/internal subnets, and a shell helper template.
 disable-model-invocation: true
 ---
 
@@ -26,7 +26,7 @@ This is the email you send before you touch anything. Get all five before promis
 
 1. **URL of the ITSI SH on port 8089.** Splunk Cloud format: `https://<stack>.splunkcloud.com:8089`. The stack name is the same one used in the Web UI URL minus the protocol, port, and path.
 2. **IP allowlist entry for your egress IP** (or VPN range). Splunk Cloud ships with the management port behind an allowlist; without your IP in there, every curl will time out, not 401. Verify your IP with `curl -s ifconfig.me` and send that exact value.
-3. **A dedicated REST API token** — *not* an MCP token, not a session key. See the next section for why this matters. Ask the Splunk admin to create it via `Settings → Tokens → New Token` with audience like `cursor-api-access`, expiration `+90d` or `Never` per their policy.
+3. **A dedicated REST API token** — *not* an MCP token, not a session key. See the next section for why this matters. Ask the Splunk admin to create it via `Settings → Tokens → New Token` with audience like `cursor-api-access`, expiration `+90d` or `Never` per their policy. **If the stack authenticates users via SAML, confirm token issuance actually works before you commit to a date** — on Splunk Cloud 10.4+ it can be blocked outright until the SAML config is changed. See "Token creation is blocked on SAML stacks".
 4. **A user account with the right capabilities** — see the capabilities section. If the token is bound to a user who doesn't have `write_itsi_service`, your CRUD calls will fail with 403 even though auth succeeds.
 5. **A safe sandbox naming convention** (you bring this, not them) — see the related skill `splunk-itsi-service-tree-design` for the SANDBOX-* prefix pattern that protects production trees during exploration.
 
@@ -53,6 +53,58 @@ print(json.loads(b64decode(payload)))  # check 'aud' claim — "Cursor API acces
 ```
 
 The trip-wire: an admin who has only ever issued MCP tokens for Cursor will often hand you the MCP token because it's labeled "Cursor". Always read the `aud` claim before debugging connectivity.
+
+## Token creation is blocked on SAML stacks (Splunk Cloud 10.4+)
+
+**Observed on:** Splunk Cloud 10.4.2604.9 with a SAML IdP, Sep 2026. The same stack issued tokens without complaint on an earlier 10.x build, so treat this as a behaviour change to check for rather than a universal rule.
+
+Creating a token in `Settings → Tokens` can fail with two errors that appear together but are independent:
+
+```
+You can only create tokens for SAML users if you enable either attribute query
+requests or authentication extensions.
+
+Role=<role> is not grantable by user <user>
+```
+
+**The SAML error is a stack configuration dependency, not something you can click past.** When users authenticate through SAML, Splunk can only re-resolve their roles at token-validation time if the SAML configuration has attribute query requests (AQR) or authentication extensions enabled. Without one of them it refuses to mint tokens for SAML-backed identities at all. Fixing it means changing the stack's authentication config — a Splunk Cloud admin or a support case.
+
+**The role error is separate and often self-inflicted.** A token cannot carry a role you lack authority to *grant*, even one you hold yourself. The New Token dialog pre-selects every role on your account, so the request fails on the first one that trips the check. Deselect what you don't need — an ITSI REST token rarely needs the Observability roles (`o11y_*`) the dialog tends to include.
+
+### Workaround: issue the token on a different search head
+
+A Splunk Cloud stack has more than one search head and they do not necessarily share authentication configuration. When creation fails on the ITSI SH, try the ad-hoc search head (`https://<stack>.splunkcloud.com`, without the `itsi.` prefix). A token issued there works against `:8089` on that host and reaches **the same indexes**.
+
+What you give up is the ITSI app namespace:
+
+| Work | Ad-hoc SH token sufficient? |
+|---|---|
+| Searches, data profiling, exports (`/services/search/jobs`, `/export`) | Yes |
+| Index and server introspection (`/services/data/indexes`, `server/info`) | Yes |
+| Service tree, KPIs, entities, base searches, episodes (`itoa_interface`, `event_management_interface`) | **No — needs an ITSI SH token** |
+
+Plan for this in the prerequisites. On a SAML stack a *working ITSI* token can depend on a stack-side configuration change, which is a days-not-minutes dependency. If the work is search-only — profiling an index, exporting raw events — the ad-hoc SH unblocks you the same day.
+
+Enabling AQR or authentication extensions is an identity-side change, and past this point it stops being an ITSI problem. Splunk publishes `splunk-identity-saml-readiness-advisor` in [splunk/splunk-agent-skills](https://github.com/splunk/splunk-agent-skills) for that handoff: it diagnoses SAML configuration read-only and establishes who owns the fix. It does not touch token issuance, so the two meet at this line rather than overlap.
+
+## The token value is shown once, and "Token ID" is not it
+
+`Settings → Tokens` shows a 64-hex **Token ID** per token. That is the JWT's `jti` claim — not the token, and not a hash of it. The token string is displayed exactly once, at creation, and cannot be recovered afterwards.
+
+Two consequences:
+
+- **Capture the value at creation**, straight into `~/.cursor/<environment>.env` at `chmod 600`. If it's lost the only route is a new token, which on a SAML stack puts you back in the section above.
+- **You can still identify a token you already hold.** Decode the payload and compare `jti` to the ID the admin is reading off the UI. That settles "is the token in my `.env` the one you're looking at?" before you debug anything else:
+
+```python
+import base64, json
+payload = token.split('.')[1]
+claims = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
+print(claims['jti'])   # compare to the Token ID shown in Settings → Tokens
+print(claims['exp'])   # epoch seconds - check it is still in the future
+```
+
+Read `exp` while you are in there. An expired token fails identically to a wrong one — `401 call not properly authenticated` — so the response tells you nothing. Checking the claim is the only cheap way to tell them apart, and it is the first thing to do when access that worked last month stops working.
 
 ## Capabilities you actually need
 
@@ -319,6 +371,8 @@ python3 -c "p='$HOME/.cursor/scripts/itsi'; open(p,'wb').write(open(p,'rb').read
 | Adding `-k` (insecure SSL) reflexively for Splunk Cloud | Splunk Cloud uses real certs; `-k` masks misconfiguration | Only `-k` for on-prem self-signed; for cloud, fix root cause if cert fails |
 | Mixing JSON body with `/services/*` form endpoints | Returns 200 with empty body; silent no-op | JSON for `/itoa_interface/*`, form for `/services/*` |
 | Polling `/itoa_interface/service` with no `count` parameter | Default is 30 — you'll think a service is missing when it's just past the first page | Always pass `count=300` (or higher) when discovering |
+| Treating the UI's "Token ID" as something you can turn back into a token | It's the `jti` claim; the value is unrecoverable once the creation dialog closes | Save the token at creation; use `jti` only to *identify* a token you already hold |
+| Assuming a token can be reissued on demand at the end of a project | On a SAML stack reissue can be blocked for days pending a config change | Check expiry early, renew before it lapses, and record the expiry date alongside the token |
 
 ## Related skills
 

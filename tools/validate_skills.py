@@ -5,13 +5,19 @@ Checks the SKILL.md frontmatter contract, keeps the README index and the plugin
 manifest in step with what is actually on disk, and refuses anything that looks
 like a real organisation or site-specific identifier.
 
-    validate_skills.py                 full check of this repository
-    validate_skills.py --scan PATH...   identifier check on arbitrary skills
+    validate_skills.py                      full check of this repository
+    validate_skills.py --scan PATH...       identifier check on arbitrary skills
+    validate_skills.py --structure PATH...  loadability check on arbitrary skills
 
 --scan applies only the rules that are about content rather than about this
 repository's layout, so it can be pointed at a skill that is not published yet.
 Use it as the sanitisation gate when promoting a newly captured skill: the rules
 that decide whether something is safe to share should live in one place.
+
+--structure is the narrower question of whether the runtime can load a skill at
+all, and carries no opinion about its content. It exists so a library of
+internal skills, where --scan is expected to report customer names on nearly
+every file, can still be guarded against the silent kind of breakage.
 
 Exit code is non-zero if any error is found. Warnings do not fail the build.
 """
@@ -276,6 +282,45 @@ def collect(paths: list[str]) -> list[str]:
     return sorted(found)
 
 
+def structure(paths: list[str]) -> int:
+    """Loadability only: can the agent see this skill at all.
+
+    Deliberately excludes the deny list so this can guard a library whose skills
+    legitimately name customers, where --scan would bury a real fault under a
+    hundred expected ones. What it catches is the failure that leaves no trace:
+    the CLI skips a skill it cannot parse, so the agent is offered a path with an
+    empty description and can never choose it. Nothing looks wrong from outside.
+    """
+    files = collect(paths)
+    if not files and not errors:
+        errors.append("no SKILL.md found in the given paths")
+
+    for path in files:
+        text = open(path, encoding="utf-8").read()
+        fm = parse_frontmatter(path, text)
+        if fm is None:
+            # parse_frontmatter reports the specific YAML fault itself
+            if not text.startswith("---\n"):
+                errors.append(f"{rel(path)}: missing YAML frontmatter")
+            continue
+
+        for field in ("name", "description"):
+            if not fm.get(field):
+                errors.append(f"{rel(path)}: missing required field {field!r}")
+
+        folder = os.path.basename(os.path.dirname(path))
+        if fm.get("name") and fm["name"] != folder:
+            errors.append(
+                f"{rel(path)}: name {fm['name']!r} does not match directory "
+                f"{folder!r} -- the installer resolves --skill against the directory"
+            )
+
+    for error in errors:
+        print(f"error: {error}", file=sys.stderr)
+    print(f"\n{len(files)} skill(s) checked for loadability, {len(errors)} error(s)")
+    return 1 if errors else 0
+
+
 def scan(paths: list[str]) -> int:
     """Content checks only: no README index, plugin manifest, category allow-list
     or visibility ban, since none of those apply outside the published tree."""
@@ -416,10 +461,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    if "--scan" in sys.argv:
-        targets = [a for a in sys.argv[1:] if a != "--scan"]
-        if not targets:
-            print("usage: validate_skills.py --scan PATH [PATH...]", file=sys.stderr)
-            sys.exit(2)
-        sys.exit(scan(targets))
+    for flag, fn in (("--scan", scan), ("--structure", structure)):
+        if flag in sys.argv:
+            targets = [a for a in sys.argv[1:] if a != flag]
+            if not targets:
+                print(f"usage: validate_skills.py {flag} PATH [PATH...]", file=sys.stderr)
+                sys.exit(2)
+            sys.exit(fn(targets))
     sys.exit(main())
