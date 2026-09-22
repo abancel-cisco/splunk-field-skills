@@ -2,7 +2,17 @@
 name: external-knowledge-sources
 category: _meta
 description: >-
-  Registry of external, actively-maintained knowledge sources this library references LIVE (by pointer, never copied): (1) chambear2809/splunk-cisco-skills — operational setup & automation SKILL.md files for Splunk and Cisco products (install/config workflows, Splunk Cloud ACS, HEC, OTel/SC4S/SC4SNMP collectors, Enterprise Security, ITSI install plus declarative service/KPI/entity/dependency/NEAP configuration and content-pack import, Observability Cloud, AppDynamics, ThousandEyes, Galileo MCP); (2) fenre splunk-monitoring-use-cases — a catalog of 7900+ infrastructure monitoring use cases (SPL + CIM data-model mappings, criticality, TA/app hints) across 23 technology domains; (3) splunk/splunk-agent-skills — the vendor's own experimental skills, advisory and read-only by design (search-performance tuning, upgrade readiness, HEC troubleshooting, deployment-server and forwarder fleet behaviour, knowledge-object governance, field extraction / CIM mapping, classic-to-Dashboard-Studio conversion, Cloud ACS admin). Use when a task needs Splunk/Cisco product setup automation, ready-made monitoring / KPI / detection SPL, or vendor-authored read-only diagnosis of a platform problem, beyond what the local library covers (e.g. "how do I install and configure the Cisco ACI app", "give me SPL to monitor VMware host contention", "what use cases exist for Kubernetes OOM kills"). ALWAYS fetch the live URLs on demand at use time; never rely on a cached snapshot, because all three are updated frequently — one of them reshaped its entire published skill set twice inside a single month.
+  Registry of three external, actively-maintained knowledge sources this library references
+  live by pointer and never copies: chambear2809/splunk-cisco-skills for Splunk and Cisco
+  product setup and automation (install and config, Cloud ACS, HEC, OTel and SC4S collectors,
+  Enterprise Security, ITSI install, Observability Cloud, AppDynamics, ThousandEyes); fenre
+  splunk-monitoring-use-cases for 7900+ monitoring use cases with SPL and CIM mappings across
+  23 technology domains; and splunk/splunk-agent-skills for the vendor's own read-only
+  advisory skills (search performance, upgrade readiness, HEC, forwarder fleets, CIM mapping,
+  Cloud ACS). Use when a task needs product setup automation, ready-made monitoring or
+  detection SPL, or vendor-authored diagnosis beyond what this library covers. Always fetch
+  the live URLs at use time rather than a cached snapshot; all three change often, and one
+  reshaped its whole skill set twice in a month.
 disable-model-invocation: true
 ---
 

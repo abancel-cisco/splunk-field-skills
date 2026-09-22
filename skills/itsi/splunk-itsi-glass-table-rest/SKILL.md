@@ -1,7 +1,18 @@
 ---
 name: splunk-itsi-glass-table-rest
 category: itsi
-description: Create ITSI Glass Tables programmatically via REST API — Service-Health-Score tiles overlaid on a custom backdrop image. Covers the gt_version=beta schema (visualizations / dataSources / layout.structure / inputs / defaults), the form-encoded `data=<JSON>` body convention that ITSI's itoa_interface endpoint requires (raw JSON returns "owner fields corrupted or missing in payload"), the SA-ITOA_files KV store collection used for backdrop images (base64 in `data` field, referenced via `splunk-enterprise-kvstore://<_key>`), the `get_full_itsi_summary_kpi(<kpi_id>)` macro pattern, the SHKPI-<service_id> ID convention for Service Health Score KPIs, and the "background carries the story, tiles carry the data" composition pattern proven on the SAP-GT-Template and reused for Buttercup. Use when someone asks for a custom glass table that visualises service interactions / sequential flows / cross-perimeter dependencies, when you need to produce a glass table from a service tree without clicking through the GUI, when batching glass-table creation across an environment, or when you want a backdrop that combines a real organisation logo with directional flow arrows.
+description: >-
+  Create ITSI Glass Tables programmatically via REST -- Service-Health-Score tiles over a
+  custom backdrop image. Covers the gt_version=beta schema (visualizations, dataSources,
+  layout.structure, inputs, defaults), the form-encoded data=<JSON> body that ITSI's
+  itoa_interface endpoint requires, since raw JSON returns owner fields corrupted or missing
+  in payload, the SA-ITOA_files KV store collection for backdrops (base64 in the data field,
+  referenced as splunk-enterprise-kvstore://), the get_full_itsi_summary_kpi macro pattern,
+  the SHKPI-<service_id> convention, and the background-carries-the-story,
+  tiles-carry-the-data composition pattern. Use when someone wants a glass table visualising
+  service interactions, sequential flows or cross-perimeter dependencies, when producing one
+  from a service tree without the GUI, when batching glass-table creation, or when the
+  backdrop must combine an organisation logo with directional flow arrows.
 disable-model-invocation: true
 ---
 

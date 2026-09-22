@@ -1,7 +1,19 @@
 ---
 name: splunk-itsi-kpi-creation-via-api
 category: itsi
-description: Create and modify Splunk ITSI KPIs via the REST API at scale — clone a working KPI structure to N services, switch metrics within a shared base search, set entity binding fields, and avoid the silent-failure modes that make REST PATCH look broken when it's actually rolling back due to validation failures elsewhere in the payload. Covers KPI payload shapes for shared-base-search KPIs, default aggregate/entity thresholds required for Service Analyzer health scores (empty kpi_threshold_template_id alone yields alert_level=-1 / health_score=N/A), the read-modify-write pattern for the nested `kpis` array on a service, why clearing the `search` field on a shared-base KPI triggers silent rollback (and how that masquerades as `is_service_entity_filter` "not persisting"), idempotent bulk-replication scripts that skip already-existing titles, service-template locking when PATCHing KPI attrs, dispatching indicators with trigger_actions=1, the GUI-vs-REST mapping for KPI fields, units that get silently blanked, and the per-KPI fields that look optional but break health propagation when omitted. Use when implementing 6-8 KPIs across multiple services from a single base search, when KPI values populate but service/entity health scores stay gray or N/A, when an ITSI KPI is not behaving after a REST PATCH, when cloning a canary KPI to other leaves, when the user mentions kpi_base_search, base_search_metric, is_service_entity_filter, threshold_field, aggregate_thresholds, or asks about scripting ITSI KPI rollout instead of clicking through the UI.
+description: >-
+  Create and modify Splunk ITSI KPIs via the REST API at scale: clone a working KPI to many
+  services, switch metrics inside a shared base search, set entity binding fields, and avoid
+  the silent failures that make a PATCH look broken when it is really rolling back on
+  validation elsewhere in the payload. Covers payload shapes for shared-base-search KPIs, the
+  default aggregate and entity thresholds that Service Analyzer health scores require (an
+  empty kpi_threshold_template_id yields alert_level=-1 and health_score=N/A), the
+  read-modify-write pattern for a service's nested kpis array, why clearing the search field
+  on a shared-base KPI rolls back silently and looks like is_service_entity_filter not
+  persisting, idempotent bulk replication, and service-template locking. Use when rolling KPIs
+  out across services from one base search, when KPI values populate but health scores stay
+  grey or N/A, or when the user mentions kpi_base_search, base_search_metric,
+  is_service_entity_filter or aggregate_thresholds.
 disable-model-invocation: true
 ---
 

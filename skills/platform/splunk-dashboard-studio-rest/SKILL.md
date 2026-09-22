@@ -1,7 +1,18 @@
 ---
 name: splunk-dashboard-studio-rest
 category: platform
-description: Create Splunk Dashboard Studio (v2) dashboards programmatically via the REST `data/ui/views` endpoint — same `splunk.singlevalue` tiles + `absolute` layout you'd put in an ITSI Glass Table, but using the actively-maintained native renderer. Covers the `<dashboard version="2"><definition><![CDATA[<JSON>]]></definition></dashboard>` XML wrapper, the form-encoded POST body with `name` + `eai:data`, the `defaults.dataSources['ds.search']` shape (NOT `defaults.dataSources['global']` like glass tables — this is a real, undocumented difference), embedding backdrop images as data URIs (`splunk-enterprise-kvstore://` is ITSI-glass-table-only and does not resolve in Dashboard Studio), the `itsi` app context required so the `get_full_itsi_summary_kpi(<kpi_id>)` macro resolves, the SHKPI-<service_id> KPI ID convention for Service Health Scores, and the explicit recommendation to use Dashboard Studio over ITSI Glass Tables whenever you don't strictly require GT-specific features (swap services, ITSI-only annotations). Use when someone asks for a service-flow visualisation that needs to be code-driven, when an ITSI Glass Table renders as a black screen (always pivot to DS), when you want a dashboard that scales reliably across Splunk Cloud minor versions, or when batching dashboard creation across an environment.
+description: >-
+  Create Splunk Dashboard Studio (v2) dashboards programmatically via the REST data/ui/views
+  endpoint -- the same splunk.singlevalue tiles and absolute layout you would put in an ITSI
+  Glass Table, but on the actively maintained native renderer. Covers the dashboard-version-2
+  XML wrapper with the definition in CDATA, the form-encoded POST carrying name and eai:data,
+  the defaults.dataSources['ds.search'] shape rather than the ['global'] that glass tables use
+  (a real, undocumented difference), backdrop images as data URIs because
+  splunk-enterprise-kvstore:// does not resolve here, the itsi app context needed for
+  get_full_itsi_summary_kpi to resolve, the SHKPI-<service_id> convention, and why to prefer
+  Dashboard Studio over Glass Tables unless you need GT-specific features. Use when someone
+  wants a code-driven service-flow visualisation, when a Glass Table renders as a black
+  screen, or when batching dashboard creation across an environment.
 disable-model-invocation: true
 ---
 

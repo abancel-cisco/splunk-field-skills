@@ -1,7 +1,18 @@
 ---
 name: splunk-itsi-flow-monitoring
 category: itsi
-description: Model a multi-step transaction / process / integration flow in Splunk ITSI so each step becomes a service with KPIs, enabling bottleneck detection and step-latency trending — something ITSI cannot do out of the box. Covers the core idea (build the flow logic in SPL, then map each step/stage/lane to a service and roll them up into an end-to-end service with business-outcome KPIs), the two entity strategies (real entities per named lane with a shared info-tag rollup, vs. pseudo-entities split by a per-transaction correlation key), the standard per-step KPI trio (item count, completion/transit time by correlation key, success/rejection rate), the E2E business-outcome KPIs (cycle-time P95, SLA-breach %, exceptions-per-N, straight-through rate), how to operationalize bottleneck detection via graded step thresholds + health rollup and step-latency trending via the metrics index, the one-shared-base-search performance rule, and the flow-specific failure modes (only SHKPI rows in itsi_summary because match_entities yields null serviceid before membership resolves). Use when the user wants transaction/process/flow monitoring, step/stage/funnel modeling, bottleneck or cycle-time detection, end-to-end latency across a pipeline, or asks how to turn a correlated event flow into ITSI services and KPIs.
+description: >-
+  Model a multi-step transaction, process or integration flow in Splunk ITSI so each step
+  becomes a service with KPIs, enabling bottleneck detection and step-latency trending that
+  ITSI cannot do out of the box. Covers the core idea -- build the flow logic in SPL, then map
+  each step to a service and roll them into an end-to-end service with business-outcome KPIs
+  -- the two entity strategies (real entities per named lane with a shared info-tag rollup, or
+  pseudo-entities split by a per-transaction correlation key), the per-step KPI trio of item
+  count, completion time by correlation key and success rate, the end-to-end KPIs (cycle-time
+  P95, SLA-breach percentage, exceptions per N, straight-through rate), graded step thresholds
+  for bottleneck detection, the one-shared-base-search performance rule, and the failure mode
+  where only SHKPI rows reach itsi_summary. Use for transaction, process, funnel or stage
+  modelling, bottleneck and cycle-time detection, or end-to-end latency across a pipeline.
 disable-model-invocation: true
 ---
 

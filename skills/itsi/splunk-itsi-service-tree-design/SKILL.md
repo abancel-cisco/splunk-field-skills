@@ -1,7 +1,19 @@
 ---
 name: splunk-itsi-service-tree-design
 category: itsi
-description: Design and safely build a Splunk ITSI service tree via the REST API without disturbing existing third-party or co-worker content. Covers the perimeter-rollup-leaf design pattern for multi-system projects, the Platform + Functional + End-to-End pillar pattern under each perimeter (Platform = infra metrics from OS/cloud-VM data; Functional = app-specific KPIs from app logs/traces; E2E = cross-perimeter business transactions), the 3-phase safe-build flow (sandbox prefix -> human review in Service Topology -> in-place cutover by rename), leaves-first ordering for single-pass dependency wiring, the SHKPI-<key> service-health-KPI naming convention that all dependency payloads rely on, partial-update via `?is_partial_data=1` for non-destructive edits, the cross-team integration pattern (read-only refs to another owner's services without polluting their tree with sandbox names), bidirectional dependency verification, and stray cleanup. Use when building an ITSI service tree from scratch, integrating with an existing partial tree owned by another consultant/team, designing the parent service for a multi-perimeter solution, structuring sub-services under a perimeter (Platform vs Functional vs E2E), when the user mentions ITSI service topology / service tree / kpis_depending_on / SHKPI / sec_grp / service templates / Platform pillar / Functional pillar / End-to-End business transactions, or when working on the "glue" between heterogeneous data sources in ITSI.
+description: >-
+  Design and safely build a Splunk ITSI service tree via the REST API without disturbing
+  existing third-party or co-worker content. Covers the perimeter-rollup-leaf pattern for
+  multi-system projects, the Platform + Functional + End-to-End pillars under each perimeter
+  (Platform = infra metrics, Functional = app-specific KPIs, E2E = cross-perimeter business
+  transactions), the three-phase safe build (sandbox prefix, human review in Service Topology,
+  in-place cutover by rename), leaves-first ordering for single-pass dependency wiring, the
+  SHKPI-<key> naming convention every dependency payload relies on, non-destructive partial
+  updates via ?is_partial_data=1, read-only references to another owner's services,
+  bidirectional dependency verification and stray cleanup. Use when building a service tree
+  from scratch, integrating with a partial tree owned by another team, structuring
+  sub-services under a perimeter, or when the user mentions service topology,
+  kpis_depending_on, SHKPI, sec_grp or service templates.
 disable-model-invocation: true
 ---
 

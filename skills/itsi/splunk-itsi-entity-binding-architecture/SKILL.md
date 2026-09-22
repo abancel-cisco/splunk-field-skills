@@ -1,7 +1,19 @@
 ---
 name: splunk-itsi-entity-binding-architecture
 category: itsi
-description: The complete 4-layer chain that makes ITSI KPIs actually scope to the right entities under a service. Covers how (1) the entity import populates the entity store with the right identifier/alias and informational fields, (2) the service entity rules combine an alias-type "matches *" clause with info-type business-attribute clauses to both bind and key entities, (3) the KPI base search exposes `entity_alias_filtering_fields` so ITSI can auto-inject a filter clause, and (4) the per-KPI `is_service_entity_filter=True` flag triggers that injection. Explains why omitting any one layer produces the classic pseudo-entity / aggregate-only-populating / no-real-entities-shown failure modes. Use when designing or debugging service-scoped infrastructure KPIs in ITSI, when entities are showing up in the service but KPIs aren't producing per-entity data, when "aggregate populates but entities don't", when a KPI is leaking data from hosts outside the service, when porting OS Hosts patterns from Azure VM, or when the user mentions entity binding, entity filtering, is_service_entity_filter, entity_alias_filtering_fields, ITSIUniqueId, or service-to-entity scoping in ITSI.
+description: >-
+  The four-layer chain that makes ITSI KPIs scope to the right entities under a service.
+  Covers how the entity import populates the entity store with the right identifier, alias and
+  informational fields; how service entity rules combine an alias-type matches-all clause with
+  info-type business-attribute clauses to both bind and key entities; how the KPI base search
+  exposes entity_alias_filtering_fields so ITSI can auto-inject a filter clause; and how the
+  per-KPI is_service_entity_filter flag triggers that injection. Explains why omitting any one
+  layer produces the classic pseudo-entity, aggregate-only or no-real-entities-shown failure
+  modes. Use when designing or debugging service-scoped infrastructure KPIs, when entities
+  appear in the service but KPIs produce no per-entity data, when the aggregate populates but
+  entities do not, when a KPI leaks data from hosts outside the service, or when the user
+  mentions entity binding, is_service_entity_filter, entity_alias_filtering_fields or
+  ITSIUniqueId.
 disable-model-invocation: true
 ---
 
