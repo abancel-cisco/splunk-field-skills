@@ -2,18 +2,18 @@
 name: splunk-itsi-kpi-creation-via-api
 category: itsi
 description: >-
-  Create and modify Splunk ITSI KPIs via the REST API at scale: clone a working KPI to many
-  services, switch metrics inside a shared base search, set entity binding fields, and avoid
-  the silent failures that make a PATCH look broken when it is really rolling back on
-  validation elsewhere in the payload. Covers payload shapes for shared-base-search KPIs, the
-  default aggregate and entity thresholds that Service Analyzer health scores require (an
-  empty kpi_threshold_template_id yields alert_level=-1 and health_score=N/A), the
-  read-modify-write pattern for a service's nested kpis array, why clearing the search field
-  on a shared-base KPI rolls back silently and looks like is_service_entity_filter not
-  persisting, idempotent bulk replication, and service-template locking. Use when rolling KPIs
-  out across services from one base search, when KPI values populate but health scores stay
-  grey or N/A, or when the user mentions kpi_base_search, base_search_metric,
-  is_service_entity_filter or aggregate_thresholds.
+  Create and modify Splunk ITSI KPIs via the REST API: clone a KPI across services, switch
+  metrics inside a shared base search, set entity binding, and diagnose PATCH calls that look
+  broken but are silently rolling back on validation elsewhere in the payload. Covers
+  shared-base-search payload shapes, the default thresholds Service Analyzer health scores
+  require (an empty kpi_threshold_template_id yields health_score=N/A), read-modify-write on
+  a service's nested kpis array, bulk replication and service-template locking. Also covers
+  experimental forecast KPIs on the core predict command (LLP5) — a single-KPI,
+  alert-oriented complement to ITSI Predictive Analytics, not a replacement — and why only
+  cyclic business KPIs forecast usefully. Use when rolling KPIs out from one base search,
+  when values populate but health scores stay grey or N/A, when asked for a forecast KPI, or
+  on mention of kpi_base_search, base_search_metric, is_service_entity_filter,
+  aggregate_thresholds, predict, LLP5 or itsi_predict_one_number.
 disable-model-invocation: true
 ---
 
@@ -638,6 +638,168 @@ Adhoc payload differences:
 ```
 
 Same Layer 4 settings apply (`is_service_entity_filter`, `entity_*_id_fields`).
+
+## Forecast KPIs with the core `predict` command
+
+**Validated end-to-end on a production Splunk Cloud 10.5 stack running ITSI 4.21.2,
+2026-09-30. Treat this as experimental** — it works, but it is not a supported ITSI
+feature and you own the result.
+
+This is not a replacement for ITSI Predictive Analytics. The two answer different
+questions. Predictive Analytics forecasts a **service health score** and is built for
+*reporting* across a *whole service*. What follows is deliberately narrower: a **single
+KPI**, with **no split by entity**. That narrowness is what makes it viable to *alert*
+on, which a service-level health forecast is not.
+
+So: "how is this service trending, for a report" is Predictive Analytics. "Warn me that
+this one metric is heading for its threshold within the hour" is this.
+
+### Selection rule — apply this before building anything
+
+> Forecast KPIs belong on **business-level KPIs that exhibit cyclic behaviour** —
+> transaction and session volumes, authentication and authorization rates,
+> synthetic-transaction response times, visitor or occupancy counts. Anything with a
+> daily, weekly or event-driven rhythm a model can learn. They do **not** belong on
+> infrastructure availability and utilisation KPIs (CPU, memory, disk, interface state,
+> device health), which sit in the `normal` band continuously and therefore forecast a
+> constant.
+
+This is not a tuning problem. A flat input yields a flat output, and no algorithm choice
+or amount of retraining changes it. On one stack, of 21 custom forecast KPIs, 12
+returned **exactly `100` at all 288 daily evaluations**, 3 more were near-constant, and
+the only 3 carrying signal were the only 3 whose input varied. The correlation was
+perfect, because the cause is the choice of input.
+
+**Qualify the input with data, not intuition.** A quick variance check:
+
+```spl
+index=<src> earliest=-7d
+| timechart span=5m <aggregation> as v
+| stats count as buckets, dc(v) as distinct, avg(v) as mean, stdev(v) as stdev
+| eval cv_pct = round(stdev/mean*100, 0)
+```
+
+Roughly 500+ distinct values over 2,000 buckets with a coefficient of variation above
+~50% is a good candidate. Fewer than ~20 distinct values means do not build the KPI.
+
+### The KPI search
+
+```spl
+index=itsi_summary earliest=-7d
+  itsi_service_id="<service_key>" itsi_kpi_id="<source_kpi_key>" is_service_aggregate=1
+| timechart span=5m avg(alert_value) as kpi_value
+| predict kpi_value as forecast algorithm=LLP5 future_timespan=12 holdback=0
+| where _time > now()
+| tail 1
+| eval _time = now()
+| fields _time forecast
+```
+
+| Element | Why |
+|---|---|
+| `span=5m`, `future_timespan=12` | 12 future buckets of 5 minutes = a 60-minute horizon |
+| `algorithm=LLP5` | Local level with periodicity, auto-detecting the cycle over 5 periods. `LLT` (local level + trend) is the fallback when no periodicity is found |
+| `where _time > now() \| tail 1` | Takes the furthest forecast point — the value predicted for now + 60 min |
+| `eval _time = now()` | **The critical line.** Stamps the forecast at evaluation time so successive runs build a trendable series. Without it the KPI reports a future-stamped event that ITSI will not graph |
+| source is `itsi_summary` | Real measured KPI values. No model, no retraining, no `apply` dependency |
+| `earliest=-7d` | 2,016 buckets, enough for LLP5 to establish periodicity |
+
+### KPI settings
+
+| Setting | Value | Why |
+|---|---|---|
+| `search_type` | `adhoc` | Single-purpose; nothing else shares it |
+| `aggregate_statop` | `latest` | One value per run |
+| `is_entity_breakdown` | `false` | The forecast is service-level |
+| `alert_period` | `15` | `predict` over 7 days of 5-minute buckets is not free; ample for a 60-min horizon |
+| `search_alert_earliest` | `10080` | **Minutes, not days.** 7 days = 10080. Leave this at the default `5` and the search sees 5 minutes of history and returns nothing |
+| `urgency` | **`0`** | Keeps the forecast out of the health score. A forecast feeding the score that is also derived from it is circular |
+| `aggregate_thresholds` | mirror the source KPI | A breach then reads as "this KPI is heading for its own threshold" |
+
+### State the accuracy horizon — every time
+
+Never present a forecast KPI without the horizon caveat. Measured with `holdback`, 24
+hours withheld, on two independent metrics:
+
+| Horizon | RADIUS authorization requests, MAE | Active session count, MAE |
+|---|---|---|
+| **0–60 min** | **27%** | **24%** |
+| 1–3 h | 124% | 88% |
+| 3–12 h | 390% | 129% |
+| 12–24 h | 28% | 24% |
+
+> **Do not claim accuracy beyond 60 minutes.** LLP5 learns the daily cycle, so it is
+> reliable at short horizon *and* at same-time-next-day, but error exceeds 100% in the
+> 1–12 hour band — that is the overnight trough, where volume collapses and the model
+> over-predicts. A single-origin test forecasting 24 hours ahead produced **234% MAPE**;
+> that is the number that appears if the horizon is overstated.
+
+Name the KPI so the horizon is self-documenting: `Predicted 60 min - <source KPI>`.
+
+### Validate with holdback before trusting it
+
+The same search with `holdback` set withholds real data, forecasts it, and lets
+predicted and actual be compared — read-only, on your own data. That comparison is far
+stronger evidence than asserting the method is sound.
+
+```spl
+| predict kpi_value as forecast algorithm=LLP5 future_timespan=288 holdback=288
+```
+
+To measure error **by horizon** (the table above), tag each holdback point with how many
+steps ahead it was forecast. A flat MAE over the whole holdback window hides the fact
+that the short horizon is fine:
+
+```spl
+| predict v as forecast algorithm=LLP5 future_timespan=288 holdback=288
+| where isnotnull(forecast) AND isnotnull(v)
+| sort 0 _time
+| streamstats count as n
+| eval steps = n - (<total_buckets> - 288)
+| where steps > 0
+| eval horizon = case(steps<=12,"0-60 min", steps<=36,"1-3 h", steps<=144,"3-12 h", true(),"12-24 h")
+| eval abserr = abs(v - forecast)
+| stats count as pts, avg(v) as actual_mean, avg(abserr) as MAE by horizon
+| eval MAE_pct = round(MAE/actual_mean*100, 0)
+```
+
+### The cold-start problem
+
+A newly created KPI has **no history in `itsi_summary`** — it only accumulates from
+creation, so the forecast returns nothing for the first few days. To demonstrate it in
+the same session, point the forecast at the **raw source data** over 7 days instead:
+
+```spl
+index=<raw_source> <filters> | timechart span=5m <aggregation> as kpi_value
+| predict kpi_value as forecast algorithm=LLP5 future_timespan=12 holdback=0
+| where _time > now() | tail 1 | eval _time=now() | fields _time forecast
+```
+
+Switch to the `itsi_summary` form once the source KPI has a few days of history; it is
+cheaper and tracks the KPI definition rather than duplicating its SPL.
+
+### How this differs from ITSI Predictive Analytics / `itsi_predict_one_number`
+
+Mechanically, so you can choose deliberately. The ITSI feature trains an MLTK model
+(`itsi_predict_<sid>_<Algorithm>_<hash>_<epoch>`) against a service's *health score* and
+surfaces it through the `itsi_predict_one_number` macro.
+
+| | ITSI Predictive Analytics | The `predict` pattern above |
+|---|---|---|
+| Forecasts | A service health score | One KPI's measured value |
+| Scope | Whole service, all its KPIs | Single KPI, no entity split |
+| Output | Single current number — the macro ends `\| fields <type>`, dropping `_time`, then `\| head 1`, clamped 0–100 | A time series that trends and graphs, with `lower95`/`upper95` bounds |
+| Built for | Reporting | Alerting at short horizon |
+| Lifecycle | An MLTK model to train and retrain | None |
+
+One consequence worth knowing: because it forecasts the health score, a service built on
+infrastructure KPIs sits flat at 100, so its forecast is a constant 100 and carries no
+information. That is a property of the input, not a defect — the same flat-input problem
+as the selection rule above, one level up.
+
+Use Predictive Analytics where a service's health score genuinely varies and a single
+current number is what is wanted. Use the pattern above where one metric needs to be
+trended and alerted on.
 
 ## Force-refresh after a KPI change
 
