@@ -22,7 +22,7 @@ Build a Splunk Dashboard Studio v2 dashboard end-to-end from a Python script: en
 
 **This is the recommended approach for code-driven service-health visualisations** even in ITSI environments. ITSI Glass Tables are a fork of an older Dashboard Studio snapshot with undocumented strict-mode constraints (silent React black-screen failures on minor schema deviations). Only use Glass Tables if you specifically need GT features like swap services or ITSI-only annotations.
 
-**Validated on:** ITSI 4.21.x. Not re-verified on ITSI 5.0.
+**Validated on:** ITSI 4.21.x; and Splunk Enterprise 10.2.5 with ITSI 5.0.0, 2026-10-09 — flat `layout`, `defaults.dataSources['ds.search']`, `splunk.singlevalue` / `splunk.area` / `splunk.markdown`, hosted in the `itsi` app, rendered correctly in the browser. The same content as an ITSI 5.0 glass table needed the tabbed layout instead (see `splunk-itsi-glass-table-rest`, Gotcha 0).
 
 ## When to use
 
@@ -58,6 +58,9 @@ ITSI Glass Tables and Dashboard Studio look similar (same `splunk.singlevalue` v
 | REST endpoint | `/itoa_interface/glass_table` | `/data/ui/views` |
 | POST body | form-encoded `data=<JSON>` | form-encoded `name=<x>` + `eai:data=<XML>` |
 | Payload format | Raw JSON | XML wrapping JSON in `<![CDATA[...]]>` |
+| `layout` shape | ITSI 5.0: tabbed — `tabs` + `layoutDefinitions.<id>.{type, options, structure}` (4.21 was flat) | flat — `layout.{type, options, globalInputs, structure}` |
+| Canvas width / height / background | `layoutDefinitions.<id>.options` | `layout.options` |
+| Viz catalogue | `splunk.*` plus legacy `viz.*`, `abslayout.line` | `splunk.*` only |
 | Backdrop image | `splunk-enterprise-kvstore://<key>` | data URI (`data:image/png;base64,...`) |
 | Defaults key | `dataSources.global` | `dataSources['ds.search']` |
 | Top-level fields | `swap_service_ids`, `selected_swap_service_id`, `interactable`, `gt_version=beta` | None of these |
@@ -450,6 +453,7 @@ https://<stack>.splunkcloud.com/en-GB/app/<APP>/<NAME>
 | Anti-pattern | Why it's bad | Fix |
 |---|---|---|
 | Lifting a glass-table JSON definition wholesale into Dashboard Studio | `defaults.dataSources.global` is silently ignored; `swap_service_ids` etc are unknown fields | Translate `global` -> `ds.search`; strip glass-table-only top-level fields |
+| Writing one definition and posting it to both containers (or the reverse lift, dashboard into glass table) | The `layout` and `defaults` sections differ; a dashboard-shaped layout POSTed as an ITSI 5.0 glass table returns 200 and then does not render | Build shared content once (visualizations, dataSources, structure, inputs) and run it through one writer per container |
 | Using `splunk-enterprise-kvstore://<key>` for the backdrop | Dashboard Studio doesn't resolve this scheme; image just doesn't appear | Encode as `data:image/png;base64,...` |
 | Hyphens in viz/ds IDs (e.g. `viz_Invoicing-Functional`) | Renderer rejects; tiles don't appear | `[A-Za-z_][A-Za-z0-9_]*` only; use `short_id()` helper |
 | Forgetting `version="2"` in the dashboard XML | Splunk parses as legacy SimpleXML; your JSON is silently ignored | Always set `<dashboard version="2" ...>` |

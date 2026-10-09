@@ -22,7 +22,25 @@ disable-model-invocation: true
 
 Build an ITSI Glass Table (gt_version=beta) end-to-end from a Python script: generate the backdrop PNG, upload it to KV store, compose the JSON definition, POST it, verify by GET. The "background carries the story, tiles carry the data" pattern keeps the glass-table JSON small while still letting you express rich layouts (logos, perimeter columns, sequential flow arrows).
 
-**Validated on:** ITSI 4.21.x. Not re-verified on ITSI 5.0.
+**Validated on:** ITSI 4.21.x (flat layout). ITSI 5.0.0 on Splunk Enterprise 10.2.5, 2026-10-09: the flat layout this skill originally documented does **not** render; 5.0 needs the tabbed layout in Gotcha 0. Stack inventory confirmed the shape (42 of 43 beta glass tables tabbed, including ones authored in 2020, so the upgrade migrates them); a tabbed rebuild was accepted and round-tripped by REST, browser render confirmation pending.
+
+## Glass tables and dashboards are NOT code compatible
+
+Same viz names, same `> primary | seriesByName(...)` syntax, same absolute positioning — and that resemblance is the trap. A definition written for one will not work in the other, and on the glass-table side the failure is a silent broken canvas, not an error. Never write one JSON definition and POST it to both endpoints. Build the shared content once (visualizations, dataSources, structure, inputs) and pass it through two writers, one per container:
+
+| Section | ITSI glass table (5.0) | Dashboard Studio v2 |
+|---|---|---|
+| Endpoint | `itoa_interface/glass_table` | `data/ui/views` |
+| Envelope | form-encoded `data=<JSON>` | form-encoded `name` + `eai:data=<XML>`, JSON inside `<definition><![CDATA[...]]>` |
+| `layout` | **tabbed**: `layout.{options, globalInputs, tabs, layoutDefinitions.<id>.{type, options, structure}}` | flat: `layout.{type, options, globalInputs, structure}` |
+| Canvas size, colour, backdrop | inside `layoutDefinitions.<id>.options` | inside `layout.options` |
+| `defaults.dataSources` key | `global` | `ds.search` (keyed by data-source type) |
+| Top-level fields | `gt_version: "beta"`, `swap_service_ids`, `selected_swap_service_id`, `interactable`, `identifying_name`, `object_type` | none of these |
+| Backdrop image | `splunk-enterprise-kvstore://<key>` | `data:image/png;base64,...` |
+| Viz catalogue | `splunk.*` plus legacy `viz.*` and `abslayout.line` | `splunk.*` only |
+| Bad schema | silent black or broken canvas, REST still returns 200 | HTTP 400 on save |
+
+Section names in the table are the ones that differ; everything not listed (viz option names, dataSource `ds.search` objects, input definitions) has transferred cleanly. The full Dashboard Studio side is in `splunk-dashboard-studio-rest`.
 
 ## When to use
 
@@ -45,6 +63,39 @@ Build an ITSI Glass Table (gt_version=beta) end-to-end from a Python script: gen
 | `/servicesNS/nobody/SA-ITOA/itoa_interface/service/<_key>` | GET | Resolve a service's KPI list to find the ServiceHealthScore KPI ID |
 
 ## Critical gotchas
+
+### Gotcha 0: ITSI 5.0 glass tables use a tabbed layout
+
+On ITSI 5.0 the layout is a container of named layouts, even when there is only one tab. The canvas properties and the structure move one level down:
+
+```json
+"layout": {
+  "options": {"showTitleAndDescription": false},
+  "globalInputs": ["input_global_trp", "input_global_refresh_rate"],
+  "tabs": {"items": [{"layoutId": "layout_1", "label": "Layout 1"}]},
+  "layoutDefinitions": {
+    "layout_1": {
+      "type": "absolute",
+      "options": {"width": 1920, "height": 1080, "backgroundColor": "#000000",
+                  "display": "auto-scale",
+                  "backgroundImage": {"x": 0, "y": 0, "src": "splunk-enterprise-kvstore://<key>"}},
+      "structure": [{"item": "viz_AbCdEfGhIj", "type": "block",
+                     "position": {"x": 0, "y": 0, "w": 300, "h": 150}}]
+    }
+  }
+}
+```
+
+The flat 4.21 shape — `layout.type`, `layout.structure` and canvas `width`/`height` directly under `layout.options` — is accepted by REST with a 200 and stored as-is, then does not render on 5.0. Nothing in the API response warns you. Two checks before and after every POST:
+
+```python
+itsi_version = req('GET', '/services/apps/local/itsi?output_mode=json')[1]['entry'][0]['content']['version']
+# after POST + GET:
+L = created['definition']['layout']
+assert 'layoutDefinitions' in L and 'structure' not in L, 'flat layout will not render on ITSI 5.0'
+```
+
+The fastest way to get the shape right on an unfamiliar version is to GET any glass table already on the stack and copy its `layout` skeleton, rather than trusting this file.
 
 ### Gotcha 1: form-encoded body, not JSON body
 
@@ -216,6 +267,7 @@ If you include an `acl` block with `acl.owner='admin'` but your bearer token bel
 
 When a glass table renders as a black screen, work this list in order — the first match is almost always the cause:
 
+0. On ITSI 5.0, check the layout is tabbed (`layout.layoutDefinitions.<id>.structure`), not flat (Gotcha 0). This is the first thing to rule out on any 5.0 stack.
 1. Open browser DevTools console; React canvas errors are silent on screen but logged. Look for `Cannot read properties of undefined` referencing a viz or dataSource ID.
 2. Verify every viz ID matches `^viz_[A-Za-z0-9_]+$` (Gotcha 7).
 3. Verify every dataSource ID matches `^ds_[A-Za-z0-9_]+$` (Gotcha 7).
@@ -393,17 +445,22 @@ def build_definition(bg_key, tiles):
             'queryParameters': {'earliest': '$global_time.earliest$',
                                 'latest':   '$global_time.latest$'},
             'refreshType': 'delay', 'refresh': '$global_refresh_rate$'}}}},
+        # ITSI 5.0 tabbed layout (Gotcha 0). On 4.21 the same keys sat flat under 'layout'.
         'layout': {
-            'type': 'absolute',
+            'options': {'showTitleAndDescription': True},
             'globalInputs': ['input_global_trp', 'input_global_refresh_rate'],
-            'structure': structure,
-            'options': {
-                'width': 2667, 'height': 1500, 'backgroundColor': '#FFFFFF',
-                'backgroundImage': {'x': 0, 'y': 0,
-                                    'src': f'splunk-enterprise-kvstore://{bg_key}',
-                                    'sizeType': 'contain'},
-                'showTitleAndDescription': True,
-            },
+            'tabs': {'items': [{'layoutId': 'layout_1', 'label': 'Layout 1'}]},
+            'layoutDefinitions': {'layout_1': {
+                'type': 'absolute',
+                'structure': structure,
+                'options': {
+                    'width': 2667, 'height': 1500, 'backgroundColor': '#FFFFFF',
+                    'display': 'auto-scale',
+                    'backgroundImage': {'x': 0, 'y': 0,
+                                        'src': f'splunk-enterprise-kvstore://{bg_key}',
+                                        'sizeType': 'contain'},
+                },
+            }},
         },
     }
 
