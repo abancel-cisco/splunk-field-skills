@@ -1,6 +1,6 @@
 ---
 name: splunk-dashboard-studio-rest
-category: platform
+category: itsi
 description: >-
   Create Splunk Dashboard Studio (v2) dashboards programmatically via the REST data/ui/views
   endpoint -- the same splunk.singlevalue tiles and absolute layout you would put in an ITSI
@@ -23,6 +23,18 @@ Build a Splunk Dashboard Studio v2 dashboard end-to-end from a Python script: en
 **This is the recommended approach for code-driven service-health visualisations** even in ITSI environments. ITSI Glass Tables are a fork of an older Dashboard Studio snapshot with undocumented strict-mode constraints (silent React black-screen failures on minor schema deviations). Only use Glass Tables if you specifically need GT features like swap services or ITSI-only annotations.
 
 **Validated on:** ITSI 4.21.x; and Splunk Enterprise 10.2.5 with ITSI 5.0.0, 2026-10-09 — flat `layout`, `defaults.dataSources['ds.search']`, `splunk.singlevalue` / `splunk.area` / `splunk.markdown`, hosted in the `itsi` app, rendered correctly in the browser. The same content as an ITSI 5.0 glass table needed the tabbed layout instead (see `splunk-itsi-glass-table-rest`, Gotcha 0).
+
+### Why an apparently platform-level skill is filed under ITSI
+
+The container mechanics below are general Dashboard Studio and hold for any dashboard: the
+`dashboard-version-2` XML wrapper, the form-encoded `name` + `eai:data` POST, the
+`defaults.dataSources['ds.search']` shape, data-URI backdrops, the viz ID alphabet, and
+user-owned dashboards. The skill is filed under ITSI anyway because what it builds is not
+general — the searches resolve `get_full_itsi_summary_kpi` from `SA-ITOA`, the tiles key on
+the `SHKPI-<service_id>` convention, and the whole thing is hosted in the `itsi` app. On a
+stack with no premium apps it produces an empty dashboard.
+
+If you are here for the container mechanics alone, read the gotchas and skip 7 and 8.
 
 ## When to use
 

@@ -71,12 +71,7 @@ skills directory.
 | [`splunk-itsi-static-data-replay`](skills/itsi/splunk-itsi-static-data-replay/SKILL.md) | Make static or historical data appear live to KPIs, via a single centralised macro. |
 | [`splunk-itsi-50-release-overview`](skills/itsi/splunk-itsi-50-release-overview/SKILL.md) | What changed in ITSI 5.0 across Service Insights, Event Analytics, and Data Integrations. |
 | [`splunk-itsi-50-upgrade`](skills/itsi/splunk-itsi-50-upgrade/SKILL.md) | Upgrade to ITSI 5.0 on single-instance or distributed on-prem. |
-
-### `platform/` — Splunk platform
-
-| Skill | Purpose |
-|---|---|
-| [`splunk-dashboard-studio-rest`](skills/platform/splunk-dashboard-studio-rest/SKILL.md) | Create Dashboard Studio (v2) dashboards programmatically through the `data/ui/views` REST endpoint. |
+| [`splunk-dashboard-studio-rest`](skills/itsi/splunk-dashboard-studio-rest/SKILL.md) | Create Dashboard Studio (v2) dashboards programmatically through the `data/ui/views` REST endpoint. The container mechanics are general Dashboard Studio; what it builds is ITSI. |
 
 ### `observability/` — Splunk Observability Cloud
 

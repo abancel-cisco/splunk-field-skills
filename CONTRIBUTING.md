@@ -75,8 +75,9 @@ merging them is a welcome pull request.
 
 Skills follow the [Agent Skills specification](https://agentskills.io/specification) and
 live at `skills/<category>/<skill-name>/SKILL.md`. Categories in use are `itsi`,
-`platform`, `observability`, and `_meta`; propose a new one in your PR if your skill
-doesn't fit.
+`observability`, and `_meta`, plus `platform` for anything that works on a stack with no
+premium apps installed — mentioning a premium app is fine there, depending on one is not.
+Propose a new category in your PR if your skill doesn't fit.
 
 Required frontmatter:
 
