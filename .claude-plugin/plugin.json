@@ -3,6 +3,7 @@
   "description": "Agent skills for Splunk ITSI, the Splunk platform, and Splunk Observability Cloud. Not an official Splunk project.",
   "skills": [
     "./skills/_meta/external-knowledge-sources",
+    "./skills/itsi/splunk-dashboard-studio-rest",
     "./skills/itsi/splunk-itsi-50-release-overview",
     "./skills/itsi/splunk-itsi-50-upgrade",
     "./skills/itsi/splunk-itsi-event-driven-service-health",
@@ -23,7 +24,6 @@
     "./skills/itsi/splunk-itsi-safety-guidelines",
     "./skills/itsi/splunk-itsi-service-tree-design",
     "./skills/itsi/splunk-itsi-static-data-replay",
-    "./skills/observability/otel-vs-splunk-ingestion",
-    "./skills/platform/splunk-dashboard-studio-rest"
+    "./skills/observability/otel-vs-splunk-ingestion"
   ]
 }
