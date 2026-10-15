@@ -119,6 +119,11 @@ WORD = re.compile(r"[A-Za-z][A-Za-z0-9.-]{2,}")
 # which teaches people to ignore warnings. Tighten it once the backlog is split.
 LONG_SKILL_WORDS = 3000
 
+# Descriptions are the one part of a skill loaded on every single session, so the
+# whole library's worth is standing context cost. skill-kit.py has always enforced
+# this; the gate did not, which is how two skills drifted past it.
+MAX_DESCRIPTION = 1024
+
 # Hostnames and addresses that are explicitly allowed as documentation examples.
 # Matched with fullmatch, so an organisation label in front of one of these still
 # fails: 'observability.splunkcloud.com' is allowed but
@@ -343,6 +348,15 @@ def scan(paths: list[str]) -> int:
                 f"{rel(path)}: no product version or date -- state what this was "
                 f"validated against before it is shared"
             )
+        fm = parse_frontmatter(path, text) or {}
+        desc = " ".join(str(fm.get("description", "")).split())
+        if len(desc) > MAX_DESCRIPTION:
+            errors.append(
+                f"{rel(path)}: description is {len(desc)} chars, over the "
+                f"{MAX_DESCRIPTION} limit -- it is loaded every session, and an "
+                f"over-long one may be truncated or rejected outright"
+            )
+
         body_words = len(text.split("---", 2)[-1].split())
         if body_words > LONG_SKILL_WORDS:
             warnings.append(
