@@ -113,6 +113,12 @@ if os.path.exists(DENY_DIGESTS_PATH):
 
 WORD = re.compile(r"[A-Za-z][A-Za-z0-9.-]{2,}")
 
+# A SKILL.md longer than this is almost always carrying reference material that
+# belongs in a sibling file, loaded only when it is actually needed. Set at 3000
+# rather than the ~1500 a tight skill wants: at 1500 this fired on 34 of 55 skills,
+# which teaches people to ignore warnings. Tighten it once the backlog is split.
+LONG_SKILL_WORDS = 3000
+
 # Hostnames and addresses that are explicitly allowed as documentation examples.
 # Matched with fullmatch, so an organisation label in front of one of these still
 # fails: 'observability.splunkcloud.com' is allowed but
@@ -336,6 +342,13 @@ def scan(paths: list[str]) -> int:
             warnings.append(
                 f"{rel(path)}: no product version or date -- state what this was "
                 f"validated against before it is shared"
+            )
+        body_words = len(text.split("---", 2)[-1].split())
+        if body_words > LONG_SKILL_WORDS:
+            warnings.append(
+                f"{rel(path)}: SKILL.md is {body_words} words. Everything a reader "
+                f"loads up front costs them attention, so move the bulk reference "
+                f"into a file beside it and leave the decisions here"
             )
         check_identifiers(path, text)
 
