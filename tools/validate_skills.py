@@ -55,6 +55,14 @@ FORBIDDEN = [
     (re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\."), "JWT"),
 ]
 
+# Allowed, and sometimes needed, in local and team skills; never in a public one.
+# --scan, which gates the team library, does not apply these.
+PUBLIC_ONLY = [
+    (re.compile(r"\b70\d{7}\b"), "support case number"),
+    (re.compile(r"\bSPL#?-?\d{5,}\b"), "support case number"),
+    (re.compile(r"\b[Cc]ase\s*#?\s*\d{6,}\b"), "support case number"),
+]
+
 # Specific organisation, partner, and environment names are held as SHA-256 digests of the
 # lowercased word. Storing them in clear text here would publish, in a public repo,
 # exactly the identifiers this check exists to keep out of it. Add one with:
@@ -246,8 +254,8 @@ def parse_frontmatter(path: str, text: str):
     return fields
 
 
-def check_identifiers(path: str, text: str) -> None:
-    for pattern, why in FORBIDDEN:
+def check_identifiers(path: str, text: str, public: bool = True) -> None:
+    for pattern, why in FORBIDDEN + (PUBLIC_ONLY if public else []):
         for m in pattern.finditer(text):
             line = text[: m.start()].count("\n") + 1
             errors.append(f"{rel(path)}:{line}: forbidden {why} -- {m.group(0)!r}")
@@ -364,7 +372,7 @@ def scan(paths: list[str]) -> int:
                 f"loads up front costs them attention, so move the bulk reference "
                 f"into a file beside it and leave the decisions here"
             )
-        check_identifiers(path, text)
+        check_identifiers(path, text, public=False)
 
     for warning in warnings:
         print(f"warning: {warning}")

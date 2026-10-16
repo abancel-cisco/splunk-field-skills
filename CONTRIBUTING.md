@@ -13,7 +13,8 @@ placeholder organisation, `buttercup-itsi.splunkcloud.com` style hostnames, and 
 stack hostname, a real username, or a real email address.
 
 The same applies to internal-only material: lab hostnames, internal enablement content,
-and anything not intended for a public audience.
+support case numbers, and anything not intended for a public audience. Write `<SR number>`
+where a case number would go.
 
 A related habit, easy to slip into if you write these during consulting work: address the
 reader as the person who runs the Splunk instance, not as somebody's consultant. "The
