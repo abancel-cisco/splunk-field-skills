@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-api-access
 category: itsi
-description: Access a Splunk ITSI Search Head over REST API. Covers prerequisites a Splunk admin must arrange (IP allowlist, dedicated REST tokens), JWT vs MCP token shapes, token creation blocked on SAML stacks and the ad-hoc search head workaround, why the UI's Token ID is the jti rather than a recoverable token, checking exp before debugging a 401, capabilities needed, 401 troubleshooting, common endpoint cheatsheet (itoa_interface/event_management_interface), search jobs oneshot vs async dispatches, notable event index gotchas, proxy egress configuration for loopback/internal subnets, and a shell helper template.
+description: Access a Splunk ITSI Search Head over REST API. Starts with a three-step quick start for letting an agent reach a stack - enable token authentication and create a token, add your public IP to the Splunk Cloud allowlist, give the agent the stack URL. Covers prerequisites a Splunk admin must arrange (IP allowlist, dedicated REST tokens), JWT vs MCP token shapes, token creation blocked on SAML stacks and the ad-hoc search head workaround, why the UI's Token ID is the jti rather than a recoverable token, checking exp before debugging a 401, capabilities needed, 401 troubleshooting, common endpoint cheatsheet (itoa_interface/event_management_interface), search jobs oneshot vs async dispatches, notable event index gotchas, proxy egress configuration for loopback/internal subnets, and a shell helper template.
 disable-model-invocation: true
 ---
 
@@ -19,6 +19,18 @@ How to get a Splunk ITSI Search Head reachable over REST from your machine, with
 - Bootstrapping a shell helper for repeated REST calls
 - Designing a project's prerequisites list to send to the Splunk admin
 - The user mentions ITSI API, itoa_interface, SA-ITOA, MCP token vs API token
+
+## Quick start: let an agent reach the stack
+
+When you administer the stack yourself — a lab, a trial, a proof of value — three steps are enough:
+
+| Step | Where | Note |
+|---|---|---|
+| 1. **Enable token authentication**, then create a token | `Settings → Tokens` → *Token Settings* → enable; then *New Token* | Off by default on Splunk Enterprise. Creation blocked on a SAML stack: see below |
+| 2. **Splunk Cloud only: add your public IP to the allowlist** | `Settings → Server settings → IP allow list` → *Search head API access* | Find the IP with `curl -s ifconfig.me`. VPN changes it. Without it, calls time out rather than return 401 |
+| 3. **Give the agent the stack URL** | The URL you use in the browser | The agent adds `:8089`, the management port. Put the token in an env file at `chmod 600`, never in the chat |
+
+If someone else administers the stack, send them the list below instead.
 
 ## Prerequisites the Splunk admin must arrange
 
