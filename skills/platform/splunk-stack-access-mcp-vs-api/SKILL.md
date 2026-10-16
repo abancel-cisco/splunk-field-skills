@@ -180,3 +180,8 @@ When something fails against `:8089`, work through these in order. The HTTP code
 ## Related skills
 
 - `splunk-itsi-api-access` — ITSI capabilities, endpoints, payloads and a shell helper once you are connected
+
+## Related external skills
+
+- **`splunk-mcp-server-setup`** (chambear2809 `splunk-cisco-skills`) installs and configures the Splunk MCP Server app, issues MCP tokens and renders the client bridge. Use it once this skill has chosen MCP.
+- **`splunk-cloud-acs-admin-setup`** (chambear2809 `splunk-cisco-skills`) and **`splunk-cloud-admin-copilot`** (Splunk `splunk-agent-skills`) change Splunk Cloud IP allowlists through the admin API (ACS) instead of the UI, with preflight and rollback.

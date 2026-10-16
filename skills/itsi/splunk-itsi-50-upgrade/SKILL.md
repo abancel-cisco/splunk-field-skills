@@ -178,3 +178,8 @@ See `splunk-itsi-common-errors` for AI Toolkit / Scientific Python version pinni
 ## SHC note
 
 Search head cluster upgrades are multi-step (deployer bundle, rolling restart). This lab runbook targets **single-instance** first; adapt using Splunk's SHC ITSI upgrade doc if the remote host is clustered.
+
+## Related external skills
+
+- **`splunk-itsi-setup`** (chambear2809 `splunk-cisco-skills`) automates ITSI package installation, upgrade, licence readiness and post-install validation.
+- **`upgrade-planning-and-execution-readiness`** (Splunk `splunk-agent-skills`) plans the Splunk Enterprise or Cloud upgrade that often comes with an ITSI upgrade.

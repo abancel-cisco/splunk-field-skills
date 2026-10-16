@@ -383,3 +383,7 @@ After phase 3 cutover, re-run with the new prefix being "" (i.e., the final name
 - `splunk-itsi-kpi-creation-via-api` — how to bulk-provision the 6 OS KPIs across all Platform leaves
 - `splunk-itsi-content-pack-creation` — overlay strategy for the content pack that feeds the Platform pillar
 - `otel-vs-splunk-ingestion` — what's feeding the KPIs that hang off the leaves
+
+## Related external skills
+
+- **`splunk-itsi-config`** (chambear2809 `splunk-cisco-skills`) applies entities, services, KPIs, dependencies, NEAPs and content-pack imports declaratively from a reviewed YAML spec, with preview, drift check and guarded cleanup. Use it to apply and reconcile a model; use this skill to decide what the model should be and for the REST mechanics underneath.

@@ -422,3 +422,7 @@ These three together would likely double the savings — potentially bringing da
 - `splunk-itsi-kpi-creation-via-api` — context for what KPI base searches do and how they're consumed
 - `splunk-itsi-service-tree-design` — context for service hierarchies and entity binding
 - `splunk-itsi-entity-binding-architecture` — entity-rule case sensitivity, the most common reason "services with zero entities" exist in the first place
+
+## Related external skills
+
+- **`search-performance-optimizer`** (Splunk `splunk-agent-skills`) tunes one slow search from its SPL and runtime evidence. Use it on the individual base search once this skill has found the scheduler bottleneck.

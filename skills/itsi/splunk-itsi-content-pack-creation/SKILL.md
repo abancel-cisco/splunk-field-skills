@@ -875,3 +875,7 @@ The hidden-state lessons from this session are why this skill exists in its curr
 - `splunk-itsi-entity-binding-architecture` — why entity-rule case sensitivity (Killer 1) matters at the architecture level
 - `splunk-itsi-entity-cmdb-lookup` — the upstream CMDB lookup that drives `service` info-field values used in entity rules
 - `otel-vs-splunk-ingestion` — context for what data sources the CP's base searches will run against
+
+## Related external skills
+
+- **`splunk-itsi-config`** (chambear2809 `splunk-cisco-skills`) applies entities, services, KPIs, dependencies, NEAPs and content-pack imports declaratively from a reviewed YAML spec, with preview, drift check and guarded cleanup. Use it to apply and reconcile a model; use this skill to decide what the model should be and for the REST mechanics underneath.
