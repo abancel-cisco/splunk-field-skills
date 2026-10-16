@@ -869,7 +869,7 @@ The hidden-state lessons from this session are why this skill exists in its curr
 
 ## Related skills
 
-- `splunk-itsi-api-access` — REST connectivity, tokens, capabilities (prereq)
+- `splunk-stack-access-mcp-vs-api` — REST connectivity and tokens; `splunk-itsi-api-access` — ITSI capabilities and endpoints (prereq)
 - `splunk-itsi-service-tree-design` — perimeter/rollup/leaf design + leaves-first ordering + `is_partial_data=1` (used in Phase 2)
 - `splunk-itsi-kpi-creation-via-api` — KPI + kpi_base_search authoring including the `is_metric` trap (Killer 2)
 - `splunk-itsi-entity-binding-architecture` — why entity-rule case sensitivity (Killer 1) matters at the architecture level

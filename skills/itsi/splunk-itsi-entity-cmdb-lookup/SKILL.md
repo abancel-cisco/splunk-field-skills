@@ -30,7 +30,7 @@ How to build and maintain a small, human-editable CSV lookup that adds the busin
 - New OTel/UF deployments are happening and you need a way to flag unknown hosts as they appear in ITSI
 - An ITSI Entity Import is being considered to add info fields to entities
 
-Prerequisite: REST access to the ITSI SH (see `splunk-itsi-api-access`).
+Prerequisite: REST access to the ITSI SH (see `splunk-stack-access-mcp-vs-api`).
 
 ## The shape of the solution
 
@@ -368,7 +368,7 @@ For multi-user environments, set the lookup permissions to `read=*, write=admin`
 
 ## Related skills
 
-- `splunk-itsi-api-access` — REST connectivity, tokens, capabilities (prereq)
+- `splunk-stack-access-mcp-vs-api` — REST connectivity and tokens; `splunk-itsi-api-access` — ITSI capabilities and endpoints (prereq)
 - `splunk-itsi-entity-binding-architecture` — why the `service` column + `ITSIUniqueId` alias must be wired correctly for KPI scoping to work
 - `splunk-itsi-service-tree-design` — the Platform leaves that the `service` column points at
 - `splunk-itsi-kpi-creation-via-api` — how KPIs on those Platform leaves consume the info fields

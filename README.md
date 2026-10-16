@@ -47,11 +47,17 @@ skills directory.
 
 ## Skills
 
+### `platform/` — Splunk platform
+
+| Skill | Purpose |
+|---|---|
+| [`splunk-stack-access-mcp-vs-api`](skills/platform/splunk-stack-access-mcp-vs-api/SKILL.md) | Get an agent onto a Splunk stack: MCP to read the data as an end user, REST to build as an admin. Token shapes, IP allowlisting, 401 triage, proxy egress. **Start here.** |
+
 ### `itsi/` — Splunk IT Service Intelligence
 
 | Skill | Purpose |
 |---|---|
-| [`splunk-itsi-api-access`](skills/itsi/splunk-itsi-api-access/SKILL.md) | Reach an ITSI search head over REST: token shapes, required capabilities, IP allowlisting, 401 triage, proxy egress. |
+| [`splunk-itsi-api-access`](skills/itsi/splunk-itsi-api-access/SKILL.md) | ITSI over REST once connected: required capabilities, endpoint families, payload conventions, a shell helper. |
 | [`splunk-itsi-safety-guidelines`](skills/itsi/splunk-itsi-safety-guidelines/SKILL.md) | Rules for agents operating on a live ITSI stack — what never to modify, and why. **Read this first.** |
 | [`splunk-itsi-service-tree-design`](skills/itsi/splunk-itsi-service-tree-design/SKILL.md) | Design and build a service tree over REST without disturbing content owned by others. |
 | [`splunk-itsi-entity-binding-architecture`](skills/itsi/splunk-itsi-entity-binding-architecture/SKILL.md) | The four-layer chain that makes KPIs actually scope to the right entities under a service. |

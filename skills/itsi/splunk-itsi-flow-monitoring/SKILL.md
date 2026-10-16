@@ -195,4 +195,4 @@ keep it to a handful. N steps × M metrics separate searches is the classic conc
 - `splunk-itsi-performance-tuning` — base-search `alert_period`, staggering cron, concurrency
 - `splunk-itsi-common-errors` — §5 "no data / Backfill" (metrics-index gaps, pseudo-entity sparseness)
 - `splunk-itsi-glass-table-rest` — building a flow tab of step-health tiles
-- `splunk-itsi-api-access` — REST connectivity, tokens, capabilities (prereq)
+- `splunk-stack-access-mcp-vs-api` — REST connectivity and tokens; `splunk-itsi-api-access` — ITSI capabilities and endpoints (prereq)

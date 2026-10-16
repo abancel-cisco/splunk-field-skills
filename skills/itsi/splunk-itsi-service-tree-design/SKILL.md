@@ -31,7 +31,7 @@ How to design a service tree for a multi-perimeter solution and build it safely 
 - Recovering from a half-built tree (orphan services, broken deps, prefix sprawl)
 - The user mentions ITSI service topology, service tree, KPI dependencies, SHKPI, sec_grp, service templates
 
-Prerequisite: REST access already working — see `splunk-itsi-api-access`. This skill assumes you can already POST to `/servicesNS/nobody/SA-ITOA/itoa_interface/service` and get a 200.
+Prerequisite: REST access already working — see `splunk-stack-access-mcp-vs-api`, then `splunk-itsi-api-access`. This skill assumes you can already POST to `/servicesNS/nobody/SA-ITOA/itoa_interface/service` and get a 200.
 
 ## Design principles
 
@@ -377,7 +377,7 @@ After phase 3 cutover, re-run with the new prefix being "" (i.e., the final name
 
 ## Related skills
 
-- `splunk-itsi-api-access` — REST connectivity, tokens, capabilities, troubleshooting (prerequisite for this skill)
+- `splunk-stack-access-mcp-vs-api` — REST connectivity, tokens, troubleshooting; `splunk-itsi-api-access` — ITSI capabilities and endpoints (prerequisites for this skill)
 - `splunk-itsi-entity-cmdb-lookup` — the upstream that drives Layer-2 entity rules on the Platform leaves
 - `splunk-itsi-entity-binding-architecture` — the 4-layer chain that scopes Platform KPIs to the right hosts per leaf
 - `splunk-itsi-kpi-creation-via-api` — how to bulk-provision the 6 OS KPIs across all Platform leaves

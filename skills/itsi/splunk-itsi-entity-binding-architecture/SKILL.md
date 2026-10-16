@@ -422,7 +422,7 @@ verify the close against the KV store (`.../notable_event_group/<id>` GET → `s
 
 ## Related skills
 
-- `splunk-itsi-api-access` — REST connectivity, tokens, capabilities (prereq)
+- `splunk-stack-access-mcp-vs-api` — REST connectivity and tokens; `splunk-itsi-api-access` — ITSI capabilities and endpoints (prereq)
 - `splunk-itsi-entity-cmdb-lookup` — how the upstream CMDB CSV drives the `service`/`perimeter` info fields via the entity import
 - `splunk-itsi-kpi-creation-via-api` — payload shapes for creating/cloning KPIs, REST PATCH pitfalls, and **default thresholds for health scores**
 - `splunk-itsi-service-tree-design` — where this binding architecture fits in the overall service tree (Platform pillars under each perimeter)

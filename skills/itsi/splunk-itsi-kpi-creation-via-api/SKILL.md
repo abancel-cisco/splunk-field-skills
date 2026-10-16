@@ -31,7 +31,7 @@ How to create, clone, and modify ITSI KPIs at scale via the REST API — and how
 - The user mentions `kpi_base_search`, `base_search_metric`, `is_service_entity_filter`, `threshold_field`, `aggregate_thresholds`
 - You want to avoid the 50+ UI clicks the equivalent manual setup would take
 
-Prerequisite: REST access already working (see `splunk-itsi-api-access`). Familiarity with the binding architecture (see `splunk-itsi-entity-binding-architecture`).
+Prerequisite: REST access already working (see `splunk-stack-access-mcp-vs-api`, then `splunk-itsi-api-access`). Familiarity with the binding architecture (see `splunk-itsi-entity-binding-architecture`).
 
 ## KPI is not a top-level object — it's an array on the service
 
@@ -857,7 +857,7 @@ Or via UI: open the service, open the KPI settings, save (no change needed). ITS
 
 ## Related skills
 
-- `splunk-itsi-api-access` — REST connectivity, tokens, capabilities (prereq)
+- `splunk-stack-access-mcp-vs-api` — REST connectivity and tokens; `splunk-itsi-api-access` — ITSI capabilities and endpoints (prereq)
 - `splunk-itsi-entity-binding-architecture` — the 4-layer chain that explains WHY each KPI field matters
 - `splunk-itsi-entity-cmdb-lookup` — the upstream that drives the `service` info field used in Layer 2 rules
 - `splunk-itsi-service-tree-design` — the service tree these KPIs hang off of

@@ -417,7 +417,7 @@ These three together would likely double the savings — potentially bringing da
 
 ## Related skills
 
-- `splunk-itsi-api-access` — REST connectivity, tokens, capabilities (prereq)
+- `splunk-stack-access-mcp-vs-api` — REST connectivity and tokens; `splunk-itsi-api-access` — ITSI capabilities and endpoints (prereq)
 - `splunk-itsi-content-pack-creation` — covers the Phase 5b "in-place consolidation" path which is the structural fix for per-metric base searches (often the largest perf win on heavily-CP-loaded deployments)
 - `splunk-itsi-kpi-creation-via-api` — context for what KPI base searches do and how they're consumed
 - `splunk-itsi-service-tree-design` — context for service hierarchies and entity binding

@@ -24,6 +24,7 @@
     "./skills/itsi/splunk-itsi-safety-guidelines",
     "./skills/itsi/splunk-itsi-service-tree-design",
     "./skills/itsi/splunk-itsi-static-data-replay",
-    "./skills/observability/otel-vs-splunk-ingestion"
+    "./skills/observability/otel-vs-splunk-ingestion",
+    "./skills/platform/splunk-stack-access-mcp-vs-api"
   ]
 }

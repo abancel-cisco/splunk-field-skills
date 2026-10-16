@@ -387,4 +387,4 @@ than as the point.
 - `splunk-itsi-kpi-creation-via-api` — thresholds, silent rollback, indicator dispatch
 - `splunk-itsi-service-tree-design` — SHKPI dependencies and repeatable tree builds
 - `splunk-itsi-content-pack-creation` — shipping the map, template and KPI together
-- `splunk-itsi-api-access` — REST stays on the management port 8089 even where the UI is on 443
+- `splunk-stack-access-mcp-vs-api` — REST stays on the management port 8089 even where the UI is on 443
