@@ -2,23 +2,22 @@
 name: splunk-itsi-content-pack-creation
 category: itsi
 description: >-
-  End-to-end playbook for authoring a custom Splunk ITSI content pack — the deployable app the
-  Create Content Pack wizard produces from services, KPIs, base searches, templates and
-  dashboards. Covers the five phases from scoping to install and predecessor cleanup, the
-  pre-flight checks for the two most expensive silent failures (case-sensitive entity rules, the
-  kpi_base_search is_metric trap), why services must be authored in-tree for the wizard to find
-  them, and the install-side pitfalls around team membership and app load order. Also covers the
-  alternative to shipping a pack at all: repointing existing KPIs onto a consolidated base search
-  in place, and the four pieces of stale state ITSI does not reconcile when you PATCH
-  base_search_id. Use when authoring or extending a content pack (including a site overlay),
-  consolidating per-metric base searches, running the wizard, repointing KPIs, disabling redundant
-  kpi_base_search objects, or cutting search head load from redundant scheduled searches.
+  End-to-end playbook for authoring a custom Splunk ITSI content pack from live services, KPIs,
+  base searches, templates and entity types: scoping, REST build, verification, packaging,
+  install and predecessor cleanup. Covers the two silent killers (case-sensitive entity rules,
+  the is_metric trap), linking services to templates, what the ITSI 5.0 authoring page packages,
+  updating an authored pack, installing via the content library API, the stale import cache that
+  yields zero entities on reinstall, and SignalFlow rate semantics. Also covers repointing
+  existing KPIs onto a consolidated base search in place and the stale state ITSI leaves behind.
+  Use when authoring, updating, packaging or installing a content pack (including a site
+  overlay), consolidating or repointing base searches, or cutting search head load from
+  redundant scheduled searches.
 disable-model-invocation: true
 ---
 
 # ITSI Content Pack Creation — End-to-End Playbook
 
-How to design, build, verify, package, and deploy a custom Splunk ITSI Content Pack (CP). Tested on a real project (Oracle DB monitoring CP that consolidated 6 redundant SIM base searches into one).
+How to design, build, verify, package, and deploy a custom Splunk ITSI Content Pack (CP). Tested on a real project (Oracle DB monitoring CP that consolidated 6 redundant SIM base searches into one). The ITSI 5.0 sections were validated in 2026-10 on a lab instance running ITSI 5.0.2 / Splunk 10.6: a three-engine database pack (Oracle, SQL Server, PostgreSQL) was authored, updated in place, released, then clean-installed on a separate instance together with its SignalFlow add-on.
 
 ## When to use this skill
 
@@ -284,6 +283,25 @@ if not any(d.get('serviceid') == DATABASE_ROLLUP_KEY for d in existing_deps):
 
 `is_partial_data=1` is **mandatory** — without it, the POST replaces the entire APM service object, wiping the SIM CP's children. This is a one-way mistake; you'd have to reinstall the SIM CP to recover.
 
+### Partial updates merge lists — they cannot remove items
+
+`is_partial_data=1` merges list fields (`kpis`, base search `metrics`) instead of replacing them. A partial POST that omits a KPI does not delete it. To remove a KPI or metric from an object *you own*, GET it and POST the full object back: `{**existing, **changes}` without `is_partial_data`. Keep partial updates for objects you don't own (the SIM parent above).
+
+### Linking services to their service templates
+
+Ship both a service and its template when more instances will be created after install. The services must be **linked** to the templates, or the authored pack exports them as standalone services.
+
+| Step | Detail |
+|---|---|
+| Endpoint | `POST /servicesNS/nobody/SA-ITOA/itoa_interface/service/<service_key>/base_service_template` with `{"_key": "<template_key>", "overwrite_entity_rules": "ignore"}` |
+| Not the generic update | Setting `base_service_template_id` in a service update is rejected or ignored |
+| Strip duplicates first | Linking *appends* the template's KPIs. Any same-titled KPI already on the service is kept and renamed. Before linking, full-write the service with only the SHKPI and KPIs that are not in the template |
+| Idempotent re-runs | If the service is already linked to that template, patch non-KPI fields only. Never re-link; it duplicates KPIs again |
+| Template edits | Update the template with a full POST; linked services sync from it |
+| Health dip | Linked KPIs get new IDs. The service health shows 50 for up to 45 minutes (the health look-back window still holds the old IDs), then recovers on its own. Don't chase it |
+
+Exported services then carry `service_template_id`, and the install recreates the link.
+
 ## Phase 3 — Verify before packaging
 
 Each of these should pass before you touch the wizard. Failures here cost minutes; failures at the wizard step cost the entire packaging cycle.
@@ -353,6 +371,14 @@ UI path: **ITSI → Configuration → Content Library → Create Content Pack** 
 | **Description** | 2-3 sentences: what it provides, prerequisites | Shown to whoever installs it |
 | **Icon** | Optional SVG | Skip on first export; add later |
 
+**ITSI 5.0.x differences.** The authoring page (`content_pack_authorship`) differs from the table above:
+
+| Field | ITSI 5.0.x behaviour |
+|---|---|
+| App ID | Generated, not typed: `DA-ITSI-CP-CUST-<authorship_key>`. It stays the same across versions of the same draft |
+| Author | Fixed to `Splunk, Inc.`. It is hardcoded in ITSI's `template_app.conf` and the GUI cannot change it |
+| Description / overview | Stored in the KV collection `itsi_content_pack_authorship`. You can write them via REST, but **reload the authoring page before regenerating**. An open page posts its own stale copy and overwrites your KV edit |
+
 ### Wizard step 2 — Select services
 
 Tick the **leaf service(s)** at the bottom of your new tree. The wizard automatically pulls:
@@ -395,6 +421,8 @@ This is the corner case you'll hit on any non-trivial CP. The wizard's universe 
 | **Deep dives** | Not offered |
 | **Notable event aggregation policies** | Not offered |
 | Modular alert actions, custom commands, scripts, custom data models | Not offered |
+
+**ITSI 5.0.x corrects this table.** The 5.0 authoring page also packages **entity types** (with vitals and dashboard drilldowns), entity import saved searches, and the views and macros they reference. A database pack built this way (version 1.2.0) shipped all of these with no sidecar. The remaining gaps on 5.0 are modular inputs, NEAPs and deep dives. Check your version before building a sidecar.
 
 If your CP needs *anything* in the bottom four rows, the wizard will silently produce an *incomplete* package. The install will succeed but the dependent functionality (e.g. an entity type your service's entity rule references, a glass table that visualizes your services) will be missing.
 
@@ -440,7 +468,7 @@ Three options, in increasing order of automation:
 | **(B) Sidecar TA app** with `inputs.conf` stanzas | Medium | Install the sidecar TA → modular inputs appear pre-configured | Many deployments / production-ready |
 | **(C) Bundled in the CP itself** | Not possible | n/a | The CP wizard does NOT package modular inputs; this option doesn't exist |
 
-The pragmatic default for a fresh CP is **(A)**: place the SignalFlow text as plain-text files in a `signalflow_programs/` subfolder of the CP's distribution directory, with install steps in the README. The reference DBM CP does this for `oracle_db.signalflow` and `postgres_db.signalflow`.
+The pragmatic default for a first build on a single environment is **(A)**: place the SignalFlow text as plain-text files in a `signalflow_programs/` subfolder of the CP's distribution directory, with install steps in the README. For anything you publish, use **(B)**. The reference DBM CP moved to (B) at 1.2.0, with a companion add-on that ships one disabled input per engine, generated from the `.signalflow` files.
 
 ### Extracting an existing SignalFlow program from a live ITSI
 
@@ -477,6 +505,21 @@ data('<metric.name>').promote('<dim1>',['<dim2>',...,]allow_missing=True).publis
 The `promote(...)` dimensions become Splunk fields on the resulting metric event. **Always include the host dimension** (`host.name` for OTel collectors, `host` for some legacy receivers) so the entity alias join works downstream. Include any other dimensions you'll want to break down by in KPI queries (e.g. `oracledb.instance.name`, `postgresql.database.name`, `tablespace_name`).
 
 `allow_missing=True` tells SignalFlow not to fail the program if some metrics aren't yet flowing — useful when the receiver is being deployed gradually across hosts.
+
+### Data-stream semantics that break rate KPIs
+
+| Trap | Effect | Fix |
+|---|---|---|
+| Cumulative counters (commits, rollbacks, executions, reads) use the default rollup | Each 5-minute point is an interval delta, not a rate, and KPIs read wrongly | Use `data('<metric>', rollup='rate')` in SignalFlow, then aggregate with `avg()` in the base search |
+| SQL Server `*.rate` metrics | Typed GAUGE, but they hold raw cumulative perf counters | Take `max` per span, then derive the rate in SPL: `sort 0 ITSIUniqueId _time \| streamstats current=f window=1 last(_time) as p_time last(c) as p by ITSIUniqueId`, and rate = `(c-p)/(_time-p_time)` when `c>=p` |
+| A named-instance dimension is missing from `promote()` | Instances on one host collapse into one entity | Promote it (e.g. `sqlserver.instance.name`) and default it in SPL when it's empty |
+
+### Shipping the streams as an add-on (option B in practice)
+
+- `sim_modular_input` stanza names are **global per scheme**. A same-name stanza in another app's `local/` (e.g. `splunk_ta_sim/local`) silently shadows your add-on's default. Post updates to *your* app's namespace and delete shadow copies.
+- A running stream doesn't pick up a changed program. Disable and re-enable the input.
+- If the target's default SIM account points at a different O11y org, set `org_id` on each input before enabling it.
+- Ship the inputs disabled, and say in the README which ones to enable.
 
 ### Pre-wizard checklist: do you need a sidecar?
 
@@ -520,7 +563,23 @@ DA-ITSI-CP-buttercup-dbm.tar.gz
     └── README.txt                       # auto-generated
 ```
 
-This is a standard Splunk app folder. Install via Splunk's app-install flow (UI or CLI).
+That is the pre-5.0 layout. An ITSI 5.0.x authored pack stores the ITSI objects as JSON, one file per object, and only Splunk-native knowledge objects as conf:
+
+```
+DA-ITSI-CP-CUST-<key>/
+├── default/        app.conf, content_pack_settings.conf, macros.conf, savedsearches.conf (entity imports), data/ui/views/*.xml
+├── itsi/           manifest.json, config.json, services/, service_templates/, kpi_base_searches/, entity_types/
+├── appserver/static/   icon.png, screenshots/
+└── metadata/default.meta
+```
+
+Download a generated version without the browser: `GET /servicesNS/nobody/SA-ITOA/itoa_interface/content_pack_authorship/files/<authorship_key>.tar.gz`.
+
+### Updating an already-authored pack (ITSI 5.0)
+
+You don't need a new draft for a new version. Fix the live objects (the services, templates and base searches the draft points at), bump the version on the authoring page, reload, and regenerate. The app ID stays the same, so installed targets see an upgrade rather than a second pack. Back up the draft's KV record and the live objects before you start.
+
+Installing the `.tar.gz` puts the app on disk, but the ITSI objects are only created when you **install the pack from the content library** (Phase 5).
 
 ## Phase 5 — Install and clean up on the target environment
 
@@ -533,6 +592,19 @@ CLI:
 splunk install app /path/to/DA-ITSI-CP-buttercup-dbm.tar.gz
 splunk restart  # if prompted
 ```
+
+On ITSI 5.0 the app install is only half of it. Then install the pack from **Configuration → Content Library**, or do it via REST (prefix `/servicesNS/nobody/SA-ITOA/itoa_interface/`):
+
+| Step | Call | Note |
+|---|---|---|
+| 1. Install the app | `POST /services/apps/local` with `name=<file or URL>`, `filename=true`, `update=true` | URL installs from GitHub fail certificate verification unless `[applicationsManagement] sslVerifyServerCert = false` (restart needed). Revert it afterwards, or upload the file instead |
+| 2. Refresh the library | `POST content_pack/refresh` | Without this, a freshly installed pack doesn't appear in the library |
+| 3. Preview | `GET content_pack/<app_id>/<version>/preview` | Lists entity types, base searches, templates, services and saved searches |
+| 4. Install | `POST content_pack/<app_id>/<version>/install` with `{"install_all": true, "enabled": true, "saved_search_action": "enable", "backfill": false, "prefix": ""}` | Creates the KV objects and enables the services |
+
+**Reinstall gotcha: zero entities.** Say you delete a pack's entities and reinstall it on the same instance. The entity import searches then run "successfully" but import nothing. The import log (`_internal`, `source=*itsi_command_itsi_import_objects.log*`) shows `total number of entities to import - 0`. ITSI keeps a per-search change cache that still holds the old rows. Delete the searches' records from the KV collections `itsi_import_objects_cache` and `itsi_bulk_import_entities_status_cache` (keyed by saved-search name), then re-dispatch with `trigger_actions=1`. A genuinely fresh instance doesn't hit this.
+
+**Expected after a fresh install:** KPIs show values within one or two intervals once entities exist. Service health can sit at 50 for up to 45 minutes, because the health look-back window still covers the period with no data. It recovers on its own.
 
 ### Post-install verification
 
@@ -581,6 +653,8 @@ In the content pack's source folder:
 - `README.md` — what this CP does, prerequisites, install steps
 - `BUG_FIXES.md` — which Splunk + ITSI + SIM CP versions you tested against, known issues
 - `CHANGELOG.md` — versions of your CP and what changed in each
+
+For a published pack, keep the authoring script (the REST deploy that builds the live objects) next to the README in the repo. Attach the authored `.tar.gz` and the add-on package as release assets. Mark the release as a pre-release until a clean install on a disposable instance passes.
 
 ## Phase 5b — In-place consolidation without packaging a CP (the "just replace the base searches" path)
 
@@ -846,6 +920,9 @@ The hidden-state lessons from this session are why this skill exists in its curr
 | Bumping the CP version on install but reusing the same `_key`s | Target env shows duplicate-key errors on KV store import | Always generate fresh UUIDs per object when building in a fresh env (don't reuse keys from another env) |
 | Leaving `source_itsi_da` populated to the SIM app name on objects you authored | Objects appear locked/uneditable in the ITSI UI on the target env | Set `source_itsi_da: ""` on all custom objects before packaging |
 | Authoring KPIs against a base search whose `_key` you didn't pin | Wizard pulls in the base search but its `_key` regenerates on install, breaking the KPI's `base_search_id` reference | Verify the wizard's exported `itsi_kpi_template.conf` references the base search by stanza name (it should); never hand-edit the `_key` |
+| Deleting a conf object (e.g. a macro) through one app's namespace when a same-name copy exists in another app | The delete also strips the definition of the copy you meant to keep | Delete through the owning app's namespace, then GET the survivor and restore its definition if it's empty |
+| Re-linking an already-linked service to its template on every deploy run | KPIs duplicated and renamed | Check `base_service_template_id` first; only link unlinked services |
+| Testing a pack install by uploading the app only (ITSI 5.0) | App present, no services, no entity types | Refresh the content library, then install the pack from it |
 | Disabling predecessor base searches BEFORE installing the CP | Brief outage between disable and install; SIM CP dashboards show no data | Install the CP first, verify KPIs colored, THEN disable predecessors |
 | Including site-specific values (CMDB lookups, perimeter values) in the CP | CP is no longer reusable across deployments | Keep CMDB lookups in a separate per-site app; ship only the platform-generic objects in the CP |
 | **(Phase 5b)** Repointing a KPI's `base_search_id` and assuming the other fields auto-reconcile | `PUT` returns 200; KPI silently emits zero events because `entity_alias_filtering_fields` is `null` or `target_field` still points at the old column | After repoint, always cleanup the four hidden-state fields per the Phase 5b Step 4 table |
