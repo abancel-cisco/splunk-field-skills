@@ -27,13 +27,31 @@ Task Progress:
 - [ ] Record current versions (splunk version, SA-ITOA version, SHC/cluster topology)
 - [ ] Review 5.0 known issues and removed features
 - [ ] Verify Splunk Enterprise ↔ ITSI 5.0 compatibility matrix
-- [ ] Verify Java on search heads (8–11 or 17; OpenJDK or Oracle)
+- [ ] Verify Java on search heads — 17 minimum, 21 maximum (see below; 8 and 11 are out)
 - [ ] Full backup of $SPLUNK_HOME (or at minimum etc/apps + etc/users + KV store)
 - [ ] Export ITSI partial backup via UI if team-scoped objects matter
 - [ ] Stop Splunk cleanly
 - [ ] Disk space check (ITSI package + migration headroom)
 - [ ] Notify: searches/KPIs unavailable during upgrade
 ```
+
+### Runtime prerequisites changed inside the 5.0 train
+
+Do not plan a 5.0.x upgrade against the 5.0.0 requirements. These landed in the maintenance
+releases and several are hard stops.
+
+| Item | Position on 5.0.1+ | Consequence if missed |
+|---|---|---|
+| Java | **17 minimum, up to 21.** 8 and 11 removed | Search heads will not start |
+| Python | 3.13 is the platform default | Custom scripts, modular inputs and alert actions may break. A 3.9 fallback exists per app on platform releases that still offer it |
+| TLS | 1.3 alongside 1.2 on Enterprise 10.4 / Cloud 10.4.2604 | Integrations pinning a protocol or cipher list |
+| OpenSSL | 3.5 on newer platforms | Compiled components and legacy algorithms |
+| Analytics Workspace | **Deprecated for entity use cases** from 5.0, on any platform version | Move those workflows to Search & Reporting or Dashboard Studio |
+| `itoa_user` | Loses KV Store write and delete on five notable-event collections | Anything writing to those as `itoa_user` |
+| ServiceNow alert action | Work-note parameter renamed to `work_notes` | Custom payloads using `worknotes` silently stop populating |
+
+On Splunk Cloud, the Cloud Monitoring Console health check lists apps not yet marked
+compatible with Python 3.13. Run it before you schedule the window.
 
 ### Version discovery commands
 
