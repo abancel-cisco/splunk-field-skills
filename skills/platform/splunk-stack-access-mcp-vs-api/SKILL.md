@@ -11,14 +11,16 @@ description: >-
   MCP tokens apart, token creation blocked on SAML stacks, the connectivity diagnostic
   ladder, 401 troubleshooting and proxy egress. Use when connecting an agent to a Splunk
   stack, choosing between Splunk MCP Server and REST, a token gets 401 or a call to 8089
-  times out, or writing the access prerequisites for a customer's Splunk admin.
+  times out, writing the access prerequisites for a customer's Splunk admin, or finding
+  the realm and the right token value for Observability Cloud.
 disable-model-invocation: true
 ---
 
 # Splunk stack access for agents: MCP or API
 
 **Validated on:** Splunk Cloud 10.x and ITSI 4.21.x for the REST material; Splunk MCP
-Server with ITSI 5.0 for the MCP side. Product-specific REST work: `splunk-itsi-api-access`.
+Server with ITSI 5.0 for the MCP side. Premium search head hostnames and the Observability
+Cloud realm probe confirmed on Splunk Cloud 10.5.2605, 2026-10. Product-specific REST work: `splunk-itsi-api-access`.
 
 ## Choose the door
 
@@ -49,7 +51,7 @@ When you administer the stack yourself — a lab, a trial, a proof of value — 
 |---|---|---|
 | 1. **Enable token authentication**, then create a token | `Settings → Tokens` → *Token Settings* → enable; then *New Token* | Off by default on Splunk Enterprise. Creation blocked on a SAML stack: see below |
 | 2. **Splunk Cloud only: add your public IP to the allowlist** | `Settings → Server settings → IP allow list` → *Search head API access* | Find the IP with `curl -s ifconfig.me`. VPN changes it. Without it, calls time out rather than return 401 |
-| 3. **Give the agent the stack URL** | The URL you use in the browser | The agent adds `:8089`, the management port. Put the token in an env file at `chmod 600`, never in the chat |
+| 3. **Give the agent the stack URL** | The URL you use in the browser | The agent adds `:8089`, the management port. A premium search head is the exception: web URL `itsi-<stack>.splunkcloud.com`, REST host `itsi.<stack>.splunkcloud.com:8089`. Put the token in an env file at `chmod 600`, never in the chat |
 
 If someone else administers the stack, send them the list below instead.
 
@@ -57,7 +59,7 @@ If someone else administers the stack, send them the list below instead.
 
 This is the email you send before you touch anything. Get all five before promising you can do API work:
 
-1. **URL of the ITSI SH on port 8089.** Splunk Cloud format: `https://<stack>.splunkcloud.com:8089`. The stack name is the same one used in the Web UI URL minus the protocol, port, and path.
+1. **URL of the ITSI SH on port 8089.** On Splunk Cloud, ITSI usually runs on a premium search head whose REST host is dotted: `https://itsi.<stack>.splunkcloud.com:8089`. Its web UI is hyphenated, `https://itsi-<stack>.splunkcloud.com`, and that name fails TLS on 8089. The primary search head is `https://<stack>.splunkcloud.com:8089`.
 2. **IP allowlist entry for your egress IP** (or VPN range). Splunk Cloud ships with the management port behind an allowlist; without your IP in there, every curl will time out, not 401. Verify your IP with `curl -s ifconfig.me` and send that exact value.
 3. **A dedicated REST API token** — *not* an MCP token, not a session key. See the next section for why this matters. Ask the Splunk admin to create it via `Settings → Tokens → New Token` with audience like `cursor-api-access`, expiration `+90d` or `Never` per their policy. **If the stack authenticates users via SAML, confirm token issuance actually works before you commit to a date** — on Splunk Cloud 10.4+ it can be blocked outright until the SAML config is changed. See "Token creation is blocked on SAML stacks".
 4. **A user account with the right capabilities** — for ITSI, see the capabilities section of `splunk-itsi-api-access`. If the token is bound to a user who doesn't have `write_itsi_service`, your CRUD calls will fail with 403 even though auth succeeds.
@@ -145,7 +147,8 @@ When something fails against `:8089`, work through these in order. The HTTP code
 | Symptom | Cause | Fix |
 |---|---|---|
 | `curl: (28) Connection timed out` | IP not in allowlist | Send your egress IP to the Splunk admin |
-| `curl: (60) SSL certificate problem` | On-prem SH with self-signed cert | Add `-k` for testing only; for prod, install the CA |
+| `curl: (60) SSL: no alternative certificate subject name matches target host name 'itsi-<stack>.splunkcloud.com'` | Splunk Cloud: the hyphenated web-UI name used for REST. The 8089 certificate covers `*.<stack>.splunkcloud.com`, and `itsi-<stack>` is a sibling of `<stack>`, not a subdomain | Use `itsi.<stack>.splunkcloud.com:8089`. Do not add `-k` |
+| `curl: (60) SSL certificate problem` | On-prem SH with a self-signed cert. Splunk Cloud certificates are publicly trusted, so there a curl 60 means the hostname is wrong | On-prem: `-k` for testing only, install the CA for production. Splunk Cloud: fix the hostname, never `-k` |
 | `HTTP=303 See Other` against `https://<stack>.splunkcloud.com/...` (no port) | You hit the web UI port (443) instead of management (8089) | Use `:8089` explicitly; the web port redirects authenticated REST through `splunkd/__raw` which has its own quirks |
 | `HTTP=401 call not properly authenticated` (with `Bearer`) | Token rejected. Try `Splunk` scheme as a quick check, then check token shape | If `Splunk` also 401s, the token is invalid/expired/wrong audience. Go back to "Token types" |
 | `HTTP=401` with `Authorization: Splunk <token>` but `Bearer` works | Token is JWT — `Bearer` is the right scheme. Code path that uses `Splunk` is legacy | Use `Bearer` consistently |
@@ -176,6 +179,27 @@ When something fails against `:8089`, work through these in order. The HTTP code
 │   └── Both 401 -> token is invalid/revoked
 └── One scheme returns 200 -> use that scheme going forward
 ```
+
+## Observability Cloud: the realm and the token
+
+Observability Cloud has no port 8089 and no allowlist step. An agent needs two values, and
+the UI shows neither where you would expect.
+
+| Need | Trap | Do |
+|---|---|---|
+| The token value | Each org token shows a **Token ID** and a **Token Secret**. The ID is only an identifier | Send the secret as `X-SF-TOKEN` |
+| The realm | A custom-domain UI, `<org>.observability.splunkcloud.com`, does not name it | Probe the realms below. The first 200 is the realm |
+
+```bash
+for realm in us0 us1 us2 eu0 eu1 eu2 jp0 au0 sg0; do
+  code=$(curl -s -o /dev/null -w '%{http_code}' -H "X-SF-TOKEN: $SFX_TOKEN" \
+    "https://api.${realm}.signalfx.com/v2/organization")
+  [ "$code" = 200 ] && { echo "realm: $realm"; break; }
+done
+```
+
+Confirm that the `id` in the response equals the Org ID shown in the UI before trusting the
+result. Extend the list if Splunk adds a realm.
 
 ## Related skills
 

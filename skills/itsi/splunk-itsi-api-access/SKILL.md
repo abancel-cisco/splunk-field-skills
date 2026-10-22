@@ -11,7 +11,9 @@ What to call, with which rights, once an agent can reach the ITSI search head. G
 — MCP or API, the token, the allowlist, 401s and timeouts — is
 `splunk-stack-access-mcp-vs-api`.
 
-**Validated on:** ITSI 4.21.x. Not re-verified on ITSI 5.0.
+**Validated on:** ITSI 4.21.x. Read paths (`current-context`, `server/info`, `apps/local`,
+`itoa_interface/service` GET) confirmed on ITSI 5.0.2 and Splunk Cloud 10.5.2605, 2026-10.
+Writes not re-verified on 5.0.
 
 ## When to use this skill
 
@@ -49,7 +51,7 @@ for need in ['read_itsi_service','write_itsi_service','delete_itsi_service']:
 "
 ```
 
-A user with the `itoa_admin` role typically gets ~508 capabilities including all three above. If the count is much lower, the token is bound to a more restricted account.
+Check the three by name, as the snippet does. The total count is not a signal: an `sc_admin` token on a Splunk Cloud ITSI search head reported 336 capabilities while holding all three, against 490 for the same user on the primary search head.
 
 ## REST endpoint cheatsheet
 
