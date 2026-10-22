@@ -1,13 +1,16 @@
 ---
 name: splunk-itsi-50-release-overview
 category: itsi
-description: Catalogs Splunk IT Service Intelligence 5.0 new features and behavioral changes across Service Insights, Event Analytics, and Data Integrations — cross-team service/episode sharing with NEAPs and fine-grained RBAC, structured service/KPI tagging, ITSI Admin Console, recurring and ServiceNow-synced maintenance windows, Event iQ Detect/Diagnose AI episode analysis, Episode Review UX overhaul, aggregation-policy priority, Default CMDB CI Enrichment Policy, modernized Content Library, and new alert integrations (Dynatrace, Zabbix, Oracle Enterprise Manager, Datadog). Use when planning ITSI 5.0 projects, demos, upgrade validation, feature walkthroughs, or when the user mentions ITSI 5.0 / Event iQ / cross-team episodes / NEAP sharing / ITSI Admin Console / aggregation policy priority.
+description: Catalogs Splunk IT Service Intelligence 5.0 new features and behavioral changes across Service Insights, Event Analytics, and Data Integrations — cross-team service/episode sharing with NEAPs and fine-grained RBAC, structured service/KPI tagging, ITSI Admin Console, recurring and ServiceNow-synced maintenance windows, Event iQ Detect/Diagnose AI episode analysis, Episode Review UX overhaul, aggregation-policy priority, Default CMDB CI Enrichment Policy, modernized Content Library, and new alert integrations (Dynatrace, Zabbix, Oracle Enterprise Manager, Datadog). Covers 5.0.1 and 5.0.2 too — the six read-only ITSI MCP tools and their pagination, and NEAP prioritization becoming always-on. Use when planning ITSI 5.0 projects, demos, upgrades or walkthroughs, or on mention of ITSI 5.0.x / Event iQ / cross-team episodes / NEAP priority / ITSI MCP tools.
 disable-model-invocation: true
 ---
 
 # Splunk ITSI 5.0 — Release Overview
 
-Feature catalog for **ITSI 5.0** (released 2026-06-30). Use this skill to plan demos, validate upgrades, and decide which new capabilities to exercise on a lab or dev instance.
+Feature catalog for **ITSI 5.0** (released 2026-06-30) and its maintenance releases. Use this skill to plan demos, validate upgrades, and decide which new capabilities to exercise on a lab or dev instance.
+
+Everything below is from the published release notes. Nothing here has been exercised in a
+lab yet, so treat feature behaviour as documented rather than confirmed.
 
 **Docs:** [New features in ITSI 5.0](https://help.splunk.com/en/splunk-it-service-intelligence/splunk-it-service-intelligence/release-notes-and-resources/5.0/release-notes/new-features-in-splunk-it-service-intelligence)
 
@@ -121,6 +124,46 @@ Pre-built field mappings normalize third-party alerts into ITSI's unified alert 
 - Modernized UI for content pack **installation and upgrades**.
 
 **Docs:** Overview of content pack management in ITSI.
+
+## What the maintenance releases changed
+
+5.0.1 and 5.0.2 are not just fixes. Two behavioural changes will surprise anyone who
+planned against 5.0.0, and one new capability matters more for AI-assisted operations than
+anything in the headline release.
+
+### ITSI MCP tools (5.0.1, extended in 5.0.2)
+
+ITSI exposes **six read-oriented tools through Splunk MCP Server** for AI-assisted episode
+investigation: list episodes, episode details, impacted objects, external links, similar
+episodes, and stored episode summarisation. Read-only, so there is no write path to worry
+about in a demo.
+
+5.0.2 adds pagination to `SA-ITOA_get_episodes`, `SA-ITOA_get_impacted_objects` and
+`SA-ITOA_get_external_links`, using stateless `count` and `offset`. Without it, a busy
+environment truncates the first response and an agent reasons over a partial episode list.
+
+**Docs:** Use IT Service Intelligence with Splunk MCP Server.
+
+### Two behavioural changes
+
+| Change | Version | Why it bites |
+|---|---|---|
+| **NEAP prioritization is always on.** The feature flag and opt-out are gone | 5.0.1 | Only the highest-priority matching policy processes an event. Review every policy priority *before* upgrading, or grouping changes silently |
+| Selecting Dynamic grouping no longer auto-enables Event iQ Detect | 5.0.1 | A previously explicit enabled state is remembered, so behaviour differs between a fresh policy and a migrated one |
+
+### Also in 5.0.1
+
+- Vectorized **Similar Episodes over Splunk Cloud Connect** for eligible Cloud deployments.
+- KPI alerts now take the **union** of inherited and service-owned tag values, rather than
+  last-write-wins.
+- Episode Review saved views: write permission allows overwrite, read-only allows saving a
+  new view only.
+- Service Discovery SPL may begin with a pipe for read-only pipelines.
+- Extensive security hardening across Event Analytics, Episode Review, Glass Tables and
+  RBAC. `splunk-itsi-50-upgrade` lists the parts that change behaviour.
+
+Runtime prerequisites also moved inside the 5.0 train — Java 17 minimum is the one that
+stops a search head. See `splunk-itsi-50-upgrade`.
 
 ## Skills that still apply on 5.0
 
