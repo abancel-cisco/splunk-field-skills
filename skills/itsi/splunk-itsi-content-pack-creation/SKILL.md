@@ -373,6 +373,8 @@ UI path: **ITSI → Configuration → Content Library → Create Content Pack** 
 
 **ITSI 5.0.x differences.** The authoring page (`content_pack_authorship`) differs from the table above:
 
+The 5.0.x page has four text fields: **Title**, **Description**, **Prerequisites** and **Content Pack Version**. Description is limited to 400 characters, so keep it to what the pack covers and its object counts. Put requirements (ITSI version, add-ons, enabled inputs, upstream integrations) in Prerequisites, not in Description. Prepare all four as copy-paste blocks before opening the page.
+
 | Field | ITSI 5.0.x behaviour |
 |---|---|
 | App ID | Generated, not typed: `DA-ITSI-CP-CUST-<authorship_key>`. It stays the same across versions of the same draft |
@@ -422,7 +424,9 @@ This is the corner case you'll hit on any non-trivial CP. The wizard's universe 
 | **Notable event aggregation policies** | Not offered |
 | Modular alert actions, custom commands, scripts, custom data models | Not offered |
 
-**ITSI 5.0.x corrects this table.** The 5.0 authoring page also packages **entity types** (with vitals and dashboard drilldowns), entity import saved searches, and the views and macros they reference. A database pack built this way (version 1.2.0) shipped all of these with no sidecar. The remaining gaps on 5.0 are modular inputs, NEAPs and deep dives. Check your version before building a sidecar.
+**ITSI 5.0.x corrects this table.** The 5.0 authoring page also packages **entity types** (with vitals and dashboard drilldowns), entity import saved searches, and the views and macros they reference. On 5.0, selecting a top-level service also selects its child services, but Splunk objects (import saved searches, dashboards, macros, lookups) are not pulled in by the services or entity types: tick each one, with its app, in the Splunk objects step. List them in the authoring sheet beforehand. A database pack built this way (version 1.2.0) shipped all of these with no sidecar. The remaining gaps on 5.0 are modular inputs, NEAPs and deep dives. Check your version before building a sidecar.
+
+**Lookup definitions are not selectable on 5.0.** Only the lookup CSV file can be ticked, so `transforms.conf` is missing from the built package. Any search that uses the lookup by definition name (for example a `WILDCARD` match) will fail after install. Download the built package from `itoa_interface/content_pack_authorship/files/<key>.tar.gz`, add `default/transforms.conf`, and repack it. Also check every screenshot before publishing: entity names and hostnames are easy to miss.
 
 If your CP needs *anything* in the bottom four rows, the wizard will silently produce an *incomplete* package. The install will succeed but the dependent functionality (e.g. an entity type your service's entity rule references, a glass table that visualizes your services) will be missing.
 
