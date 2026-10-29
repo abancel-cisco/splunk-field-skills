@@ -61,6 +61,13 @@ PUBLIC_ONLY = [
     (re.compile(r"\b70\d{7}\b"), "support case number"),
     (re.compile(r"\bSPL#?-?\d{5,}\b"), "support case number"),
     (re.compile(r"\b[Cc]ase\s*#?\s*\d{6,}\b"), "support case number"),
+    # Jira is internal-only, so a key or a link in a public skill points nowhere for the
+    # reader and discloses the tracker for everyone else. Three digits or more, not inside
+    # a longer identifier, and not one of the standards and formats shaped the same way.
+    (re.compile(
+        r"(?<![\w-])(?!(?:SHA|AES|UTF|CVE|RFC|ISO|IEC|KEM|MLKEM|RSA|TLS|INC|UC)-)"
+        r"[A-Z][A-Z0-9]{1,9}-\d{3,6}\b(?!-\d)"), "Jira key"),
+    (re.compile(r"atlassian\.net|/browse/[A-Z][A-Z0-9]+-\d+", re.I), "Jira link"),
 ]
 
 # Specific organisation, partner, and environment names are held as SHA-256 digests of the
