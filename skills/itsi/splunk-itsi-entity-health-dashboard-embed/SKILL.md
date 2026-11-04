@@ -79,6 +79,8 @@ Splunk **dark UI preference** breaks Simple XML and Dashboard Studio embed rende
 ## Agent quick path
 
 ```
+0. ITSI 5.0 or any new build → Dashboard Studio udf_dashboard (bare token, time_range_token → global_time,
+   no inputs, theme="light", no hardcoded colours). See splunk-itsi-entity-health-dashboards. Cases A/B are 4.21.
 1. If identifier != host → use Case A pattern (form.<token> + tr time)
 2. If identifier == host and embed still blank → check home app, ACL, tr time override, then form.host
 3. If still broken → udf_dashboard (ta_nix model) or SA-ITSI-CustomModuleViz clone

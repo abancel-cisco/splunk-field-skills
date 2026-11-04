@@ -1,7 +1,7 @@
 ---
 name: splunk-itsi-entity-health-dashboards
 category: itsi
-description: Documents how ITSI Entity Health embeds custom Simple XML dashboards (xml_dashboard drilldowns on entity_type.dashboard_drilldowns), the token/time/ACL/app contract validated on ITSI 4.21.x Cloud, and why dashboards often fail only inside the embed. Covers form vs dashboard XML, form.<token> alias_param_map for non-host identifiers, hidden tr time token when EH overrides panel earliest/latest, home app in TA/CP not itsi, global ACL owner=nobody, reference patterns DA-ITSI-OS-Host_Entity_View and host_information, and known dark-UI theme issues. Use when custom entity dashboards break only in Entity Management or Entity Health, when wiring dashboard_drilldowns on custom entity types, or when building TA/CP entity views.
+description: Documents how ITSI Entity Health embeds custom dashboards on entity_type.dashboard_drilldowns. The default is Dashboard Studio as udf_dashboard, the ITSI 5.0 contract that every shipped pack uses. It has no inputs, a bare entity token, and the reserved time_range_token alias mapped to global_time. On 5.0 the Simple XML form.<token> pattern shows "Search is waiting for input...". Also covers light/dark colour-mode rules, the legacy Simple XML xml_dashboard contract validated on ITSI 4.21.x Cloud, and why dashboards often fail only inside the embed. Covers form vs dashboard XML, form.<token> alias_param_map for non-host identifiers, hidden tr time token when EH overrides panel earliest/latest, home app in TA/CP not itsi, global ACL owner=nobody, reference patterns DA-ITSI-OS-Host_Entity_View and host_information. Use when custom entity dashboards break only in Entity Management or Entity Health, when wiring dashboard_drilldowns on custom entity types, or when building TA/CP entity views.
 disable-model-invocation: true
 ---
 
@@ -9,7 +9,38 @@ disable-model-invocation: true
 
 How ITSI **Entity Health** loads custom dashboards, why they often **fail only in the embed**, and the **validated contract** for non-host entity identifiers on ITSI 4.21.x / Splunk Cloud.
 
-**Validated on:** ITSI 4.21.x, Splunk Cloud (multiple stacks).
+**Validated on:** ITSI 4.21.x, Splunk Cloud (multiple stacks) for the Simple XML pattern. ITSI 5.0.2 on-prem for the Dashboard Studio contract below, which comes first because it is the default.
+
+## Default: Dashboard Studio (`udf_dashboard`) — the ITSI 5.0 contract
+
+**Prefer Dashboard Studio for every new entity dashboard.** On 5.0, the Simple XML `<form>` + `form.<token>` pattern described further down binds no token inside Entity Health. Every panel then shows **"Search is waiting for input..."**. This was reproduced on 5.0.2. Every shipped pack with an entity dashboard uses the contract below: Cisco Enterprise Networks, Cisco Data Center, AppDynamics and ThousandEyes.
+
+| Piece | Value |
+|---|---|
+| Root | `<dashboard version="2" theme="light">` with the JSON definition in `<definition><![CDATA[ … ]]>` |
+| Inputs | **None.** `"inputs": {}` and `"layout": {"globalInputs": []}`. ITSI sets the tokens itself |
+| Entity token | A bare token name (e.g. `entity_token`) used directly in queries: `host="$entity_token$"` |
+| Time | `defaults.dataSources["ds.search"].options.queryParameters` = `{"earliest": "$global_time.earliest$", "latest": "$global_time.latest$"}` |
+| `dashboard_type` | `udf_dashboard` |
+| `alias_param_map` | `{"alias": "<entity alias>", "ds_source": "", "param": "entity_token"}` plus `{"alias": "time_range_token", "ds_source": "", "param": "global_time"}`. `time_range_token` is a reserved alias for the Entity Health time range; shipped packs use `time_range_token`, `time_range_token-1`, `-2` or `-4` interchangeably. **No `form.` prefix** |
+| Home app / ACL | As for Simple XML: the pack's app, `owner=nobody`, global, `read=*` |
+
+```json
+"dashboard_drilldowns": [{
+  "title": "<Entity Type> Health", "id": "<view_id>", "base_url": "",
+  "dashboard_type": "udf_dashboard",
+  "params": {"static_params": {}, "alias_param_map": [
+    {"alias": "<entity alias>", "ds_source": "", "param": "entity_token"},
+    {"alias": "time_range_token", "ds_source": "", "param": "global_time"}]}
+}]
+```
+
+**Colour mode.** Entity Health embeds render wrongly in one of the two modes more often than not. Rules:
+- Set `theme="light"`, as every shipped pack does.
+- **Never hardcode colours.** That means no `backgroundColor`, no series colours and no `majorColor`. A hardcoded background is what turns a panel unreadable once a user's preference is dark.
+- Check every new dashboard with the user's preference in both light and dark.
+
+The Simple XML material below still applies to 4.21 stacks, and to repairing older dashboards.
 
 ## When to use this skill
 
@@ -29,7 +60,7 @@ How ITSI **Entity Health** loads custom dashboards, why they often **fail only i
 
 ---
 
-## Validated pattern — non-host identifier + `<form>` (ITSI 4.21.x)
+## Legacy pattern — non-host identifier + `<form>` (ITSI 4.21.x only; fails on 5.0)
 
 Use when the entity type identifies devices by a field other than `host` and data may be sparse relative to the EH time picker default.
 
@@ -142,6 +173,8 @@ If `<dashboard>` + `$host$`/`$earliest$`/`$latest$` still fails: try **`udf_dash
 ## Agent checklist
 
 ```
+- [ ] ITSI 5.0: Dashboard Studio + udf_dashboard, no inputs, bare token, time_range_token -> global_time
+- [ ] theme="light", no hardcoded colours; check light and dark user preference
 - [ ] Reproduce in Entity Health (not only /app/<home_app>/<dash>)
 - [ ] Confirm home app is TA/CP (not core itsi) and ACL is global nobody
 - [ ] Grep alias_param_map: entity fields only; form.<token> if using <form>
@@ -169,4 +202,6 @@ If `<dashboard>` + `$host$`/`$earliest$`/`$latest$` still fails: try **`udf_dash
 | v4 | Mapped `earliest`/`latest` in `alias_param_map` | Token binding errors |
 | v5 | `param: serial` (no `form.` prefix) | Identifier not bound in form |
 | v6 | `$earliest$`/`$latest$` on panels | EH picker overrode to `-15m`; empty charts |
-| **v7** | `<form>` + `form.<field>` + hidden `tr` token | **Works** when data exists in `tr` window |
+| **v7** | `<form>` + `form.<field>` + hidden `tr` token | **Works** when data exists in `tr` window (4.21) |
+| v8 (5.0.2) | Same v7 dashboard on ITSI 5.0 | "Search is waiting for input..." on every panel |
+| **v9 (5.0.2)** | Dashboard Studio, no inputs, `udf_dashboard`, bare `entity_token` + `time_range_token` → `global_time` | The contract every shipped 5.0 pack uses |
