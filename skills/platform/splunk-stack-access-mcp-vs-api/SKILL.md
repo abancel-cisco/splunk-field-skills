@@ -33,7 +33,7 @@ Splunk Enterprise 10.4.2 with ITSI 5.0.2, 2026-11. Product-specific REST work: `
 | Token | Audience restricted to the MCP endpoint (`/services/mcp`) | A REST token. An MCP token gets 401 everywhere else |
 | Network | The MCP endpoint | Management port 8089; on Splunk Cloud, your IP on the allowlist |
 | Rights needed | A normal user role | Ideally admin; at least the write capabilities for what you build |
-| Typical case | A customer's production stack; a stakeholder asking questions of their data | A PoV or lab stack you administer |
+| Typical case | A production stack someone else administers; a stakeholder asking questions of their data | A PoV or lab stack you administer |
 
 **Default to MCP whenever the task only reads.** Move to the API only when you have to change
 something, and only on a stack where that has been agreed.
@@ -46,7 +46,7 @@ token. See "Fallback: administer through the web UI" below.
 |---|---|
 | An admin REST token to answer questions about the data | Bypasses the compliance MCP gives for free |
 | An MCP token for build work | 401 on every non-MCP endpoint |
-| Asking a customer for admin rights on production to "explore" | Wrong door; ask for an MCP user instead |
+| Asking the Splunk admin for admin rights on production to "explore" | Wrong door; ask for an MCP user instead |
 
 ## Quick start: let an agent reach the stack
 
