@@ -47,14 +47,19 @@ If neither exists, flow monitoring isn't possible yet — fix the instrumentatio
 
 ## The model
 
+```mermaid
+flowchart TD
+  base["ONE shared base search: all step and lane metrics in one SPL, one generated indicator search"]
+  base --> s1["Step or lane 1: service and KPIs"]
+  base --> s2["Step or lane 2: service and KPIs"]
+  base --> sn["Step or lane N: service and KPIs"]
+  base --> e2e["E2E rollup service: business-outcome KPIs"]
+  s1 -->|child of| e2e
+  s2 -->|child of| e2e
+  sn -->|child of| e2e
 ```
-                          ONE shared base search  (all step/lane metrics in one SPL)
-                                        │  (one generated indicator search)
-     ┌───────────────┬─────────────────┼───────────────────┬─────────────────────────┐
-   Step/Lane 1     Step/Lane 2      Step/Lane 3   ...      Step/Lane N        E2E rollup service
-   (service+KPIs)  (service+KPIs)   (service+KPIs)         (service+KPIs)     (business-outcome KPIs)
-        └────────────────┴────────────── children of ──────────────┴──────────────► E2E service
-```
+
+Every step is a child of the E2E service, and they all read the one base search.
 
 - **One service per step/stage/lane.** Its KPIs describe that step in isolation.
 - **One E2E rollup service** as parent, carrying whole-journey **business-outcome** KPIs. Its health

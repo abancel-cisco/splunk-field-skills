@@ -3,16 +3,16 @@ name: splunk-stack-access-mcp-vs-api
 category: platform
 description: >-
   How an agent gets onto a Splunk stack, and through which door. MCP is for reading the
-  data in the stack with full compliance, as an end user would - the user's roles apply.
-  The REST API on port 8089 is for admin work - changing content, building things during a
-  PoV - and ideally needs admin rights. Covers the choice between them, the three-step
-  quick start for API access (enable token authentication and create a token, add your
-  public IP to the Splunk Cloud allowlist, give the agent the stack URL), telling REST and
-  MCP tokens apart, token creation blocked on SAML stacks, the connectivity diagnostic
-  ladder, 401 troubleshooting and proxy egress. Use when connecting an agent to a Splunk
-  stack, choosing between Splunk MCP Server and REST, a token gets 401 or a call to 8089
-  times out, writing the access prerequisites for a customer's Splunk admin, or finding
-  the realm and the right token value for Observability Cloud.
+  data with full compliance, as the user - their roles apply. The REST API on port 8089 is
+  for admin work - changing content, building things - and ideally needs admin rights. The
+  web UI on 443, driven by a headless browser session, is the fallback when 8089 is closed
+  or a feature has no API. Covers the choice between them, the three-step quick start for
+  API access (token, Splunk Cloud allowlist, stack URL), telling REST and MCP tokens apart,
+  token creation blocked on SAML stacks, the connectivity ladder, 401 troubleshooting and
+  proxy egress. Use when connecting an agent to a Splunk stack, choosing between Splunk MCP
+  Server and REST, a token gets 401 or a call to 8089 times out, 8089 is unreachable,
+  writing the access prerequisites for a Splunk admin, or finding the realm and token for
+  Observability Cloud.
 disable-model-invocation: true
 ---
 
@@ -20,7 +20,8 @@ disable-model-invocation: true
 
 **Validated on:** Splunk Cloud 10.x and ITSI 4.21.x for the REST material; Splunk MCP
 Server with ITSI 5.0 for the MCP side. Premium search head hostnames and the Observability
-Cloud realm probe confirmed on Splunk Cloud 10.5.2605, 2026-10. Product-specific REST work: `splunk-itsi-api-access`.
+Cloud realm probe confirmed on Splunk Cloud 10.5.2605, 2026-10. Web UI fallback validated on
+Splunk Enterprise 10.4.2 with ITSI 5.0.2, 2026-11. Product-specific REST work: `splunk-itsi-api-access`.
 
 ## Choose the door
 
@@ -36,6 +37,10 @@ Cloud realm probe confirmed on Splunk Cloud 10.5.2605, 2026-10. Product-specific
 
 **Default to MCP whenever the task only reads.** Move to the API only when you have to change
 something, and only on a stack where that has been agreed.
+
+A third door, the **web UI on port 443**, is a fallback for admin work when 8089 cannot be
+reached or a feature has no REST endpoint. It needs a username and password instead of a
+token. See "Fallback: administer through the web UI" below.
 
 | Anti-pattern | Why it hurts |
 |---|---|
@@ -54,6 +59,87 @@ When you administer the stack yourself — a lab, a trial, a proof of value — 
 | 3. **Give the agent the stack URL** | The URL you use in the browser | The agent adds `:8089`, the management port. A premium search head is the exception: web URL `itsi-<stack>.splunkcloud.com`, REST host `itsi.<stack>.splunkcloud.com:8089`. Put the token in an env file at `chmod 600`, never in the chat |
 
 If someone else administers the stack, send them the list below instead.
+
+## Fallback: administer through the web UI (port 443)
+
+An agent can administer a Splunk instance, or any system that only exposes a web UI, by
+logging in with a headless browser and reusing that session. On Splunk it reaches the same
+splunkd endpoints as 8089 through the web tier, so almost all REST work stays possible.
+Clicking through screens is only needed where no endpoint exists.
+
+**Use it when:**
+- 8089 is closed and you cannot get it opened in time. Some hosted demo and training
+  platforms close it on every instance. On Splunk Cloud the right fix is still the
+  allowlist entry. Use this door only when that is not available.
+- A feature has no usable API, for example installing an app from a local file when the
+  server cannot download it, or a system with no API at all.
+
+**Why it stays a fallback:**
+
+| | REST on 8089 | Web UI on 443 |
+|---|---|---|
+| Credential | A scoped, expiring token you can revoke on its own | The account's username and password: a full interactive session, revoked only by changing the password |
+| Speed | One HTTP call | A browser login first (a few seconds), then calls through the web proxy |
+| Robustness | Stable API | Session expiry, CSRF tokens, login page changes. Large chunked responses can fail through the proxy (`bad character in reply size`): page with `count`/`offset` |
+| SSO | Tokens work | SAML or MFA login breaks headless login. You need a local (non-SSO) account |
+
+**What it needs:**
+1. **A local account's username and password.** Store them in an env file at `chmod 600`,
+   never in a script or a deliverable. Tell the user that you will log in with their
+   password rather than a token.
+2. **Port 443 reachable** from where the agent runs.
+3. **A headless browser.** Playwright for Python plus Chromium
+   (`pip install playwright requests && python -m playwright install chromium`). Put the venv in
+   a scratch folder, not the deliverable workspace.
+4. **The same agreement on scope and backups as REST admin work.** The access is the same,
+   so the rules are too.
+
+**How it works on Splunk:**
+1. Log in through the form at `/<locale>/account/login` with Playwright. Wait until the URL
+   leaves the login page, then copy the cookies into a `requests` session.
+2. Call splunkd through the web proxy: `https://<host>/<locale>/splunkd/__raw/<splunkd path>`,
+   for example `/en-US/splunkd/__raw/services/server/info?output_mode=json`. Send the session
+   cookies plus `X-Splunk-Form-Key: <value of the splunkweb_csrf_token_<port> cookie>` and
+   `X-Requested-With: XMLHttpRequest`. Writes fail without the form key. The proxy refuses
+   bearer tokens: a token alone gets `303 See Other` back to the login page.
+3. Body conventions are unchanged: form-encoded for `/services/*`, JSON for ITSI's
+   `itoa_interface`.
+4. Install or upgrade an app from a local file with `POST /<locale>/manager/appinstall/_upload`,
+   multipart, with fields `splunk_form_key`, `appfile` and `force=1`. Then check the result
+   with `GET /services/apps/local/<app>`. An upgrade unpacks over the old app without deleting
+   files the new version no longer ships, so stale libraries can shadow new ones.
+5. Restart with `POST /services/server/control/restart` through the proxy. Then poll the login
+   page and log in again, because the restart ends the session.
+6. Where there is no endpoint, drive the page itself with Playwright selectors, and take a
+   screenshot after each step as evidence for the user.
+
+```python
+from playwright.sync_api import sync_playwright
+import requests
+
+def web_session(base, user, password, locale="en-US"):
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context(ignore_https_errors=True)
+        page = ctx.new_page()
+        page.goto(f"{base}/{locale}/account/login", wait_until="networkidle")
+        page.fill("input[name=username]", user)
+        page.fill("input[name=password]", password)
+        page.keyboard.press("Enter")
+        page.wait_for_url(lambda u: "account/login" not in u, timeout=60000)
+        cookies = ctx.cookies()
+        browser.close()
+    s = requests.Session()
+    for c in cookies:
+        s.cookies.set(c["name"], c["value"], domain=c["domain"], path=c["path"])
+    csrf = next(c["value"] for c in cookies if c["name"].startswith("splunkweb_csrf_token"))
+    s.headers.update({"X-Splunk-Form-Key": csrf, "X-Requested-With": "XMLHttpRequest"})
+    return s   # then s.get(f"{base}/{locale}/splunkd/__raw/services/...")
+```
+
+The same pattern works on other web-only systems: log in with the browser, then call the
+JSON endpoints the web app itself uses with the session cookies and CSRF header. Read
+them from the browser's network traffic.
 
 ## Prerequisites the Splunk admin must arrange
 
@@ -146,10 +232,10 @@ When something fails against `:8089`, work through these in order. The HTTP code
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `curl: (28) Connection timed out` | IP not in allowlist | Send your egress IP to the Splunk admin |
+| `curl: (28) Connection timed out` | IP not in allowlist, or the platform closes 8089 for everyone. If 443 answers on the same host and the port also times out from a second network, it is the platform | Splunk Cloud: send your egress IP to the Splunk admin. Platform-wide block: use the web UI fallback |
 | `curl: (60) SSL: no alternative certificate subject name matches target host name 'itsi-<stack>.splunkcloud.com'` | Splunk Cloud: the hyphenated web-UI name used for REST. The 8089 certificate covers `*.<stack>.splunkcloud.com`, and `itsi-<stack>` is a sibling of `<stack>`, not a subdomain | Use `itsi.<stack>.splunkcloud.com:8089`. Do not add `-k` |
 | `curl: (60) SSL certificate problem` | On-prem SH with a self-signed cert. Splunk Cloud certificates are publicly trusted, so there a curl 60 means the hostname is wrong | On-prem: `-k` for testing only, install the CA for production. Splunk Cloud: fix the hostname, never `-k` |
-| `HTTP=303 See Other` against `https://<stack>.splunkcloud.com/...` (no port) | You hit the web UI port (443) instead of management (8089) | Use `:8089` explicitly; the web port redirects authenticated REST through `splunkd/__raw` which has its own quirks |
+| `HTTP=303 See Other` against `https://<stack>.splunkcloud.com/...` (no port) | You hit the web UI port (443) instead of management (8089). The web tier only accepts a login session, not a token | Use `:8089` explicitly. If 8089 is unreachable, log in through the web UI fallback and call `/<locale>/splunkd/__raw/...` with the session |
 | `HTTP=401 call not properly authenticated` (with `Bearer`) | Token rejected. Try `Splunk` scheme as a quick check, then check token shape | If `Splunk` also 401s, the token is invalid/expired/wrong audience. Go back to "Token types" |
 | `HTTP=401` with `Authorization: Splunk <token>` but `Bearer` works | Token is JWT — `Bearer` is the right scheme. Code path that uses `Splunk` is legacy | Use `Bearer` consistently |
 | `HTTP=403` after auth succeeds | Capability gap | Check `current-context` for missing capabilities — ITSI: `splunk-itsi-api-access` |
@@ -163,21 +249,26 @@ When something fails against `:8089`, work through these in order. The HTTP code
 
 ## 401 troubleshooting flow
 
+```mermaid
+flowchart TD
+  start["401: call not properly authenticated"] --> conn{"Does curl reach the search head?"}
+  conn -->|No| ladder["Back to the connectivity diagnostic ladder"]
+  conn -->|Yes| jwt{"Is the token a JWT? Three parts, starts with eyJ"}
+  jwt -->|Yes| decode{"Decode the payload. No signature needed"}
+  decode -->|aud is MCP server| wrongtype["Wrong token type: ask for an API token"]
+  decode -->|exp in the past| expired["Expired: ask for a fresh one"]
+  decode -->|sub is someone else| account["Wrong account"]
+  decode -->|all fine| both
+  jwt -->|No: legacy token| both{"Try both schemes on /services/server/info"}
+  both -->|Both 401| revoked["Token invalid or revoked"]
+  both -->|One returns 200| use["Use that scheme from now on"]
 ```
-401 call not properly authenticated
-├── Is connectivity OK? (curl reaches the SH, gets a response)
-│   └── No -> back to "Connectivity diagnostic ladder"
-├── Is the token a JWT (3 parts, starts with eyJ)?
-│   ├── Yes -> decode the payload (no signature needed):
-│   │       - aud == "MCP server"? -> wrong token type, ask for an API token
-│   │       - exp in the past?     -> expired, ask for a fresh one
-│   │       - sub == expected user? -> if not, wrong account
-│   └── No -> legacy token, may need Authorization: Splunk <token> scheme
-├── Try BOTH schemes on /services/server/info:
-│       curl -H "Authorization: Bearer $TOKEN" ...
-│       curl -H "Authorization: Splunk $TOKEN" ...
-│   └── Both 401 -> token is invalid/revoked
-└── One scheme returns 200 -> use that scheme going forward
+
+A legacy token may need the `Authorization: Splunk` scheme. Test both:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" ...
+curl -H "Authorization: Splunk $TOKEN" ...
 ```
 
 ## Observability Cloud: the realm and the token

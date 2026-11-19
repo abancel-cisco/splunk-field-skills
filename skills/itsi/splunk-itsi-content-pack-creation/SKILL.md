@@ -54,44 +54,28 @@ This is the opposite of the older "write conf files by hand" approach that often
 
 ## The five-phase flow
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 1: DESIGN the CP scope and topology (1-2 hr)             │
-│   - One CP per logical domain (DB monitoring, biz txns, etc.)  │
-│   - Decide leaf services vs. service template                  │
-│   - Decide where leaves attach to the existing tree            │
-│   - Decide which predecessor objects this CP will replace      │
-└────────────────────────┬───────────────────────────────────────┘
-                         ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 2: BUILD components in ITSI via REST (1-3 hr)            │
-│   - Leaves-first: base searches → leaves → rollups → patch APM │
-│   - Apply the pre-flight checklist (Bug 4, is_metric trap)     │
-└────────────────────────┬───────────────────────────────────────┘
-                         ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 3: VERIFY before packaging (30 min)                      │
-│   - Entity binding count > 0 on each leaf                      │
-│   - KPI data flowing (Service Analyzer shows colored tiles)    │
-│   - Base search produces all KPI-target columns                │
-│   - Service Analyzer topology matches design                   │
-└────────────────────────┬───────────────────────────────────────┘
-                         ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 4: RUN the Content Pack wizard (15 min)                  │
-│   - User clicks; assistant dictates exact field values         │
-│   - Select root service(s); review the auto-pulled closure     │
-│   - Download the .tar.gz                                       │
-└────────────────────────┬───────────────────────────────────────┘
-                         ▼
-┌────────────────────────────────────────────────────────────────┐
-│ Phase 5: INSTALL + CLEANUP on the target env (30 min)          │
-│   - Install the .tar.gz as a Splunk app                        │
-│   - Verify topology lands intact                               │
-│   - Disable predecessor objects (the 6 SIM base searches etc.) │
-│   - Document version + tested date in BUG_FIXES.md             │
-└────────────────────────────────────────────────────────────────┘
-```
+1. **Design** the CP scope and topology (1–2 h)
+   - One CP per logical domain (DB monitoring, business transactions, and so on)
+   - Decide leaf services or a service template
+   - Decide where the leaves attach to the existing tree
+   - Decide which predecessor objects this CP will replace
+2. **Build** the components in ITSI via REST (1–3 h)
+   - Leaves first: base searches → leaves → rollups → patch APM
+   - Apply the pre-flight checklist (Bug 4, the is_metric trap)
+3. **Verify** before packaging (30 min)
+   - Entity binding count > 0 on each leaf
+   - KPI data flowing: Service Analyzer shows coloured tiles
+   - The base search produces every KPI-target column
+   - The Service Analyzer topology matches the design
+4. **Run** the Content Pack wizard (15 min)
+   - The user clicks; the assistant dictates the exact field values
+   - Select the root service(s) and review the auto-pulled closure
+   - Download the .tar.gz
+5. **Install and clean up** on the target environment (30 min)
+   - Install the .tar.gz as a Splunk app
+   - Verify the topology lands intact
+   - Disable the predecessor objects (the 6 SIM base searches, etc.)
+   - Record the version and tested date in BUG_FIXES.md
 
 ## Pre-flight checklist (the two silent killers)
 
@@ -166,12 +150,12 @@ For DB monitoring: ship a live service per engine (`Database Oracle`, `Database 
 
 If the SIM CP is installed and you want to extend its `Application Performance Monitoring` service, the topology becomes:
 
-```
-Application Performance Monitoring  (SIM CP — DO NOT MODIFY)
- ├── Database                                       (your new rollup — Global team)
- │    ├── Database Oracle                          (your leaf — 13 Oracle KPIs)
- │    └── Database Postgres                        (your leaf — N Postgres KPIs)
- └── ...other SIM CP children...
+```mermaid
+flowchart TD
+  apm["Application Performance Monitoring: SIM CP, do not modify"] --> db["Database: your new rollup, Global team"]
+  db --> ora["Database Oracle: your leaf, 13 Oracle KPIs"]
+  db --> pg["Database Postgres: your leaf, N Postgres KPIs"]
+  apm --> other["Other SIM CP children"]
 ```
 
 **Critical**: extend the SIM service via `is_partial_data=1` PATCH (append to `services_depending_on_me`), never via full POST. Full POST clobbers the rest of the SIM service. See `splunk-itsi-service-tree-design` for the safe-build pattern.
@@ -601,7 +585,7 @@ On ITSI 5.0 the app install is only half of it. Then install the pack from **Con
 
 | Step | Call | Note |
 |---|---|---|
-| 1. Install the app | `POST /services/apps/local` with `name=<file or URL>`, `filename=true`, `update=true` | URL installs from GitHub fail certificate verification unless `[applicationsManagement] sslVerifyServerCert = false` (restart needed). Revert it afterwards, or upload the file instead |
+| 1. Install the app | `POST /services/apps/local` with `name=<file or URL>`, `filename=true`, `update=true` | URL installs from GitHub fail certificate verification unless `[applicationsManagement] sslVerifyServerCert = false` (restart needed). Revert it afterwards, or upload the file instead. Without 8089, upload through the web UI: `POST /<locale>/manager/appinstall/_upload`, see the web UI fallback in `splunk-stack-access-mcp-vs-api` |
 | 2. Refresh the library | `POST content_pack/refresh` | Without this, a freshly installed pack doesn't appear in the library |
 | 3. Preview | `GET content_pack/<app_id>/<version>/preview` | Lists entity types, base searches, templates, services and saved searches |
 | 4. Install | `POST content_pack/<app_id>/<version>/install` with `{"install_all": true, "enabled": true, "saved_search_action": "enable", "backfill": false, "prefix": ""}` | Creates the KV objects and enables the services |

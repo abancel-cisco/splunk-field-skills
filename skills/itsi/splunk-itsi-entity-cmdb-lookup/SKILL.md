@@ -34,29 +34,18 @@ Prerequisite: REST access to the ITSI SH (see `splunk-stack-access-mcp-vs-api`).
 
 ## The shape of the solution
 
+```mermaid
+flowchart LR
+  owner["Human owner"] -->|"edits it with the Lookup Editor add-on, in the browser"| csv["entity_cmdb.csv, the source of truth: host, entity_type, perimeter, application, notes"]
+  csv -->|"consumed two ways"| itsi["ITSI: KPI searches use the lookup, and an optional entity import pushes the columns as info_field_x for service entity rules"]
+  itsi --> audit["Scheduled audit search: ITSI_NOT_IN_CMDB, CMDB_ORPHAN_NOT_IN_ITSI, PERIMETER_UNKNOWN"]
+  itsi --> scope["KPI scoping, for example where perimeter=Middleware"]
 ```
-                                                            ┌─────────────────────────────┐
-┌─────────────────────────────────┐                          │   ITSI                      │
-│ entity_cmdb.csv (source of truth)│                          │                             │
-│   host                          │  consumed two ways:      │  (a) KPI searches use       │
-│   entity_type                   │  ────────────────────►   │      | lookup entity_cmdb   │
-│   perimeter                     │                          │      host AS extracted_host │
-│   application                   │                          │      OUTPUT perimeter ...   │
-│   notes                         │                          │                             │
-└─────────────────────────────────┘                          │  (b) Optional Entity Import │
-       ▲                                                     │      pushes columns as      │
-       │ edited via Lookup Editor add-on                     │      info_field_<x> on      │
-       │ (Splunk-supported, runs in browser)                 │      entities for service   │
-       │                                                     │      entity rules.          │
-   Human owner                                               └─────────────────────────────┘
-                                                                          │
-                                                              ┌───────────┴────────────┐
-                                                              ▼                        ▼
-                                                       Scheduled Audit          KPI scoping
-                                                       Search detects:          |where perimeter="Middleware"
-                                                       - ITSI_NOT_IN_CMDB
-                                                       - CMDB_ORPHAN_NOT_IN_ITSI
-                                                       - PERIMETER_UNKNOWN
+
+The KPI searches use it like this:
+
+```spl
+| lookup entity_cmdb host AS extracted_host OUTPUT perimeter ...
 ```
 
 ## Keep the schema small

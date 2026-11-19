@@ -47,17 +47,19 @@ The layer count stays at three (parent → perimeter → leaf). Inside each peri
 
 #### The three-pillar pattern (per perimeter)
 
+```mermaid
+flowchart TD
+  m["Middleware: perimeter rollup"] --> plat["Platform: infra metrics from OS and VM data"]
+  m --> func["Functional: app-specific KPIs from app logs and traces"]
+  m --> app["App Health, optional: combined view or alerting wrapper"]
+  plat --> busp["Middleware-Bus - Platform: 6 OS KPIs"]
+  plat --> qp["Middleware-Queue - Platform: 6 OS KPIs"]
+  func --> bie["Middleware-Bus - Integration Engines: process count, queue depth, errors/s"]
+  func --> jms["Middleware-Queue - JMS Queues: pending messages, throughput"]
+  app --> overall["Middleware - Overall App Health: rolls up Platform and Functional"]
 ```
-Middleware  (perimeter rollup)
- ├── Platform                                        (infra metrics from OS/VM data)
- │    ├── Middleware-Bus   - Platform                 ← 6 OS KPIs (CPU, Mem, Disk R/W, Net R/T)
- │    └── Middleware-Queue - Platform                 ← 6 OS KPIs
- ├── Functional                                      (app-specific KPIs from app logs/traces)
- │    ├── Middleware-Bus   - Integration Engines      ← e.g., process count, queue depth, errors/s
- │    └── Middleware-Queue - JMS Queues               ← e.g., pending message count, throughput
- └── App Health      (optional)                      (combined health view, or alerting wrapper)
-      └── Middleware - Overall App Health            ← rolls up Platform + Functional severities
-```
+
+The six OS KPIs are CPU, memory, disk read and write, and network receive and transmit.
 
 Why three pillars (Platform / Functional / App Health):
 
@@ -75,12 +77,12 @@ Resist the temptation to go 4 levels deep on day 1 (e.g., adding a "Fulfilment �
 
 A 5th-or-6th sibling perimeter (peer of Middleware/Fulfilment/ERP/etc.) dedicated to cross-perimeter user journeys:
 
-```
-End-to-End Business Transactions  (perimeter rollup)
- ├── Order-to-Cash                  ← spans ERP → Middleware → Fulfilment → Invoicing
- ├── Procure-to-Pay                 ← spans Invoicing → ERP → Fulfilment
- ├── Invoice Processing             ← spans Invoicing-Capture → ERP-App → ERP-DB
- └── ...
+```mermaid
+flowchart TD
+  e2e["End-to-End Business Transactions: perimeter rollup"] --> o2c["Order-to-Cash: spans ERP → Middleware → Fulfilment → Invoicing"]
+  e2e --> p2p["Procure-to-Pay: spans Invoicing → ERP → Fulfilment"]
+  e2e --> inv["Invoice Processing: spans Invoicing-Capture → ERP-App → ERP-DB"]
+  e2e --> more["..."]
 ```
 
 Each E2E leaf has KPIs measuring user-perceived metrics (transaction latency, error rate, completion %) plus `services_depends_on` references to the underlying perimeter leaves whose health affects the journey. This makes "executive view" a one-glance answer.
@@ -145,29 +147,15 @@ This pattern survives them refactoring their tree, lets them delete sandbox cont
 
 This is the flow we executed and the one I'd repeat every time. It's slower than "just create the tree" by maybe 30 minutes, and saves you from a 4-hour cleanup if something is off.
 
+```mermaid
+flowchart LR
+  p1["Phase 1: sandbox build"] -->|"user opens Service Topology in the UI"| p2["Phase 2: human review"]
+  p2 -->|"user explicitly approves"| p3["Phase 3: cutover"]
 ```
-┌──────────────────────────┐
-│  Phase 1: Sandbox build  │  Create everything with SANDBOX-CURSOR- prefix.
-│                          │  Within-sandbox deps only (no cross-team yet).
-│                          │  Leaves-first ordering.
-└────────────┬─────────────┘
-             │
-             ▼  (user opens Service Topology in UI)
-┌──────────────────────────┐
-│  Phase 2: Human review   │  User visually inspects the tree.
-│                          │  Adjusts naming, structure, dep direction.
-│                          │  Pattern is non-destructive — anything wrong
-│                          │  can be deleted with one sweep on the prefix.
-└────────────┬─────────────┘
-             │
-             ▼  (user explicitly approves)
-┌──────────────────────────┐
-│  Phase 3: Cutover        │  Strip prefix in-place (partial update).
-│                          │  Wire cross-team deps.
-│                          │  Delete drafts/old test services.
-│                          │  Verify dep counts bidirectionally.
-└──────────────────────────┘
-```
+
+- **Phase 1, sandbox build.** Create everything with the `SANDBOX-CURSOR-` prefix. Dependencies within the sandbox only, none cross-team yet. Leaves first.
+- **Phase 2, human review.** The user inspects the tree, and adjusts naming, structure and dependency direction. Nothing here is destructive: anything wrong goes in one sweep on the prefix.
+- **Phase 3, cutover.** Strip the prefix in place (partial update). Wire the cross-team dependencies. Delete drafts and old test services. Verify the dependency counts in both directions.
 
 ### Phase 1: Sandbox prefix discipline
 
@@ -184,14 +172,14 @@ ITSI dependencies are unidirectional, set at create time via `services_depends_o
 
 For a tree like:
 
-```
-Buttercup (top parent)
- ├── Middleware
- │    ├── Middleware - Integration Bus
- │    └── Middleware - Message Queue
- ├── Fulfilment
- │    └── Fulfilment - JBoss
- └── ...
+```mermaid
+flowchart TD
+  top["Buttercup: top parent"] --> mw["Middleware"]
+  top --> ful["Fulfilment"]
+  top --> more["..."]
+  mw --> bus["Middleware - Integration Bus"]
+  mw --> q["Middleware - Message Queue"]
+  ful --> jb["Fulfilment - JBoss"]
 ```
 
 Create order is leaves → rollups → parent:

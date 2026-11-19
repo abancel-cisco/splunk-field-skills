@@ -70,19 +70,12 @@ Whatever the source, the output is the same, and it should be built programmatic
 rebuilt: entities in `itsi_entities`, services in `itsi_services`, and entity rules on each
 service binding the two. See `splunk-itsi-entity-cmdb-lookup` for the import itself.
 
-```
-┌─────────────────────┐     programmatic import      ┌──────────────────────────┐
-│ Source of the map   │  ─────────────────────────►  │ ITSI KV (canonical map)  │
-│ (CMDB / lookup /    │   entity import, REST, CP    │  • itsi_services         │
-│  the alerts)        │                              │  • itsi_entities         │
-└─────────────────────┘                              │  • entity_rules on svcs  │
-         │                                           └────────────┬─────────────┘
-         │  alert field aligns with entity alias / info           │
-         ▼                                                        ▼
-┌─────────────────────┐                              ┌──────────────────────────┐
-│ Data Integration    │  identity field mapped       │ Episode KPI + entity     │
-│ (variable mapping)  │  at connection time          │ filter (one definition)  │
-└─────────────────────┘                              └──────────────────────────┘
+```mermaid
+flowchart TD
+  src["Source of the map: CMDB, lookup or the alerts"] -->|"programmatic import: entity import, REST, content pack"| kv["ITSI KV, the canonical map: itsi_services, itsi_entities, entity rules on services"]
+  src -->|"alert field aligns with entity alias or info"| di["Data Integration: variable mapping"]
+  kv --> kpi["Episode KPI and entity filter: one definition"]
+  di ---|"identity field mapped at connection time"| kpi
 ```
 
 The target is **one service template, one episode KPI, one normalization template**. Scale to N
